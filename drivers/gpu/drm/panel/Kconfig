@@ -536,6 +536,15 @@ config DRM_PANEL_VISIONOX_RM69299
 	  Say Y here if you want to enable support for Visionox
 	  RM69299  DSI Video Mode panel.
 
+config DRM_PANEL_WINGTECH_TIANMA_HX8394D
+	tristate "Wingtech Tianma HX8394D panel"
+	depends on OF
+	depends on DRM_MIPI_DSI
+	depends on BACKLIGHT_CLASS_DEVICE
+	depends on REGULATOR
+	help
+	  Say Y if you want to enable support for Wingtech Tianma HX8394D panel.
+
 config DRM_PANEL_WINGTECH_YASSY_ILI9881
 	tristate "Wingtech Yassy ILI9881 panel"
 	depends on OF
