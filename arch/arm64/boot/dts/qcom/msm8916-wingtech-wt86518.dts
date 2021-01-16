@@ -67,6 +67,10 @@
 			<3259000 1>, <3000000 0>;
 	};
 
+	usb_vbus: extcon-usb-dummy {
+		compatible = "linux,extcon-usb-dummy";
+	};
+
 	gpio-keys {
 		compatible = "gpio-keys";
 
@@ -80,13 +84,6 @@
 			gpios = <&msmgpio 107 GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_VOLUMEUP>;
 		};
-	};
-
-	usb_id: usb-id {
-		compatible = "linux,extcon-usb-gpio";
-		id-gpios = <&msmgpio 110 GPIO_ACTIVE_HIGH>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&usb_id_default>;
 	};
 
 	speaker_amp: audio-amplifier {
@@ -144,8 +141,6 @@
 			regulator-min-microvolt = <5400000>;
 			regulator-max-microvolt = <5400000>;
 			enable-gpios = <&msmgpio 118 GPIO_ACTIVE_HIGH>;
-			regulator-active-discharge = <1>;
-			ti,active-discharge-time-us = <800>;
 		};
 
 		reg_lcd_neg: outn {
@@ -153,8 +148,6 @@
 			regulator-min-microvolt = <5400000>;
 			regulator-max-microvolt = <5400000>;
 			enable-gpios = <&msmgpio 117 GPIO_ACTIVE_HIGH>;
-			regulator-active-discharge = <1>;
-			ti,active-discharge-time-us = <800>;
 		};
 	};
 };
@@ -315,15 +308,15 @@
 
 &usb {
 	status = "okay";
-	extcon = <&usb_id>, <&usb_id>;
+	extcon = <&usb_vbus>;
+	dr_mode = "peripheral";
 };
 
 &usb_hs_phy {
-	extcon = <&usb_id>;
+	extcon = <&usb_vbus>;
 };
 
 &wcd_codec {
-	//qcom,micbias1-ext-cap;
 	qcom,micbias-lvl = <2800>;
 	qcom,mbhc-vthreshold-low = <75 150 237 450 500>;
 	qcom,mbhc-vthreshold-high = <75 150 237 450 500>;
@@ -392,7 +385,7 @@
 
 	l11 {
 		regulator-min-microvolt = <1800000>;
-		regulator-max-microvolt = <3300000>; //2950000
+		regulator-max-microvolt = <2950000>;
 		regulator-allow-set-load;
 		regulator-system-load = <200000>;
 	};
@@ -505,14 +498,6 @@
 
 		drive-strength = <2>;
 		bias-disable;
-	};
-
-	usb_id_default: usb-id-default {
-		pins = "gpio110";
-		function = "gpio";
-
-		drive-strength = <8>;
-		bias-pull-up;
 	};
 };
 
