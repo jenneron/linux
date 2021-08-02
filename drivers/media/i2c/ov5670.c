@@ -2,8 +2,12 @@
 // Copyright (c) 2017 Intel Corporation.
 
 #include <linux/acpi.h>
+#include <linux/clk.h>
+#include <linux/delay.h>
+#include <linux/gpio/consumer.h>
 #include <linux/i2c.h>
 #include <linux/module.h>
+#include <linux/regulator/consumer.h>
 #include <linux/pm_runtime.h>
 #include <media/v4l2-ctrls.h>
 #include <media/v4l2-device.h>
@@ -100,6 +104,12 @@ struct ov5670_mode {
 
 	/* Sensor register settings for this resolution */
 	const struct ov5670_reg_list reg_list;
+};
+
+static const char * const ov5670_supply_names[] = {
+	"DOVDD",	/* 1.8V Digital I/O power */
+	"AVDD",		/* 2.8V Analog power */
+	"DVDD",		/* 1.2V Digital core power */
 };
 
 static const struct ov5670_reg mipi_data_rate_840mbps[] = {
@@ -1817,6 +1827,11 @@ struct ov5670 {
 	struct media_pad pad;
 
 	struct v4l2_ctrl_handler ctrl_handler;
+
+	struct clk		*xvclk;
+	struct gpio_desc	*reset_gpio;
+	struct regulator_bulk_data supplies[ARRAY_SIZE(ov5670_supply_names)];
+
 	/* V4L2 Controls */
 	struct v4l2_ctrl *link_freq;
 	struct v4l2_ctrl *pixel_rate;
@@ -2449,16 +2464,69 @@ static const struct v4l2_subdev_internal_ops ov5670_internal_ops = {
 	.open = ov5670_open,
 };
 
+static int ov5670_power_on(struct ov5670 *ov5670)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(&ov5670->sd);
+	int ret;
+
+	if (is_acpi_node(dev_fwnode(&client->dev)))
+		return 0;
+
+	ret = clk_prepare_enable(ov5670->xvclk);
+	if (ret < 0) {
+		dev_err(&client->dev, "failed to enable xvclk\n");
+		return ret;
+	}
+
+	if (ov5670->reset_gpio) {
+		gpiod_set_value_cansleep(ov5670->reset_gpio, 1);
+		usleep_range(1000, 2000);
+	}
+
+	ret = regulator_bulk_enable(ARRAY_SIZE(ov5670_supply_names),
+				    ov5670->supplies);
+	if (ret < 0) {
+		dev_err(&client->dev, "failed to enable regulators\n");
+
+		gpiod_set_value_cansleep(ov5670->reset_gpio, 1);
+		clk_disable_unprepare(ov5670->xvclk);
+
+		return ret;
+	}
+
+	gpiod_set_value_cansleep(ov5670->reset_gpio, 0);
+	usleep_range(1500, 1800);
+
+	return 0;
+};
+
+static void ov5670_power_off(struct ov5670 *ov5670)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(&ov5670->sd);
+
+	if (is_acpi_node(dev_fwnode(&client->dev)))
+		return;
+
+	gpiod_set_value_cansleep(ov5670->reset_gpio, 1);
+	regulator_bulk_disable(ARRAY_SIZE(ov5670_supply_names),
+			       ov5670->supplies);
+	clk_disable_unprepare(ov5670->xvclk);
+}
+
 static int ov5670_probe(struct i2c_client *client)
 {
+	struct device *dev = &client->dev;
+	struct fwnode_handle *fwnode = dev_fwnode(dev);
 	struct ov5670 *ov5670;
 	const char *err_msg;
 	u32 input_clk = 0;
 	int ret;
+	unsigned int i;
 
-	device_property_read_u32(&client->dev, "clock-frequency", &input_clk);
-	if (input_clk != 19200000)
-		return -EINVAL;
+	/* Get hardware configuration */
+	ret = fwnode_property_read_u32(fwnode, "clock-frequency", &input_clk); // device_property_read_u32
+	if (ret)
+		return ret;
 
 	ov5670 = devm_kzalloc(&client->dev, sizeof(*ov5670), GFP_KERNEL);
 	if (!ov5670) {
@@ -2467,13 +2535,48 @@ static int ov5670_probe(struct i2c_client *client)
 		goto error_print;
 	}
 
+	if (!is_acpi_node(fwnode)) {
+		ov5670->xvclk = devm_clk_get(dev, "xvclk");
+		if (IS_ERR(ov5670->xvclk)) {
+			dev_err(&client->dev, "could not get xvclk clock (%pe)\n",
+				ov5670->xvclk);
+			return PTR_ERR(ov5670->xvclk);
+		}
+
+		clk_set_rate(ov5670->xvclk, input_clk);
+		input_clk = clk_get_rate(ov5670->xvclk);
+	}
+
+	if (input_clk != 19200000)
+		dev_warn(&client->dev, "external clock rate %u is unsupported",
+			 input_clk);
+
+	ov5670->reset_gpio = devm_gpiod_get_optional(dev, "reset",
+						     GPIOD_OUT_LOW);
+	if (IS_ERR(ov5670->reset_gpio))
+		return PTR_ERR(ov5670->reset_gpio);
+
+	for (i = 0; i < ARRAY_SIZE(ov5670_supply_names); i++)
+		ov5670->supplies[i].supply = ov5670_supply_names[i];
+
+	ret = devm_regulator_bulk_get(dev, ARRAY_SIZE(ov5670_supply_names),
+				      ov5670->supplies);
+	if (ret)
+		return ret;
+
 	/* Initialize subdev */
 	v4l2_i2c_subdev_init(&ov5670->sd, client, &ov5670_subdev_ops);
+
+	/* Power on */
+	ret = ov5670_power_on(ov5670);
+	if (ret)
+		return ret;
 
 	/* Check module identity */
 	ret = ov5670_identify_module(ov5670);
 	if (ret) {
 		err_msg = "ov5670_identify_module() error";
+		ov5670_power_off(ov5670);
 		goto error_print;
 	}
 
@@ -2545,6 +2648,8 @@ static int ov5670_remove(struct i2c_client *client)
 	v4l2_ctrl_handler_free(sd->ctrl_handler);
 	mutex_destroy(&ov5670->mutex);
 
+	ov5670_power_off(ov5670);
+
 	pm_runtime_disable(&client->dev);
 
 	return 0;
@@ -2563,11 +2668,20 @@ static const struct acpi_device_id ov5670_acpi_ids[] = {
 MODULE_DEVICE_TABLE(acpi, ov5670_acpi_ids);
 #endif
 
+#ifdef CONFIG_OF
+static const struct of_device_id ov5670_dt_ids[] = {
+	{ .compatible = "ovti,ov5670" },
+	{ /* sentinel */ }
+};
+MODULE_DEVICE_TABLE(of, ov5670_dt_ids);
+#endif
+
 static struct i2c_driver ov5670_i2c_driver = {
 	.driver = {
 		.name = "ov5670",
 		.pm = &ov5670_pm_ops,
 		.acpi_match_table = ACPI_PTR(ov5670_acpi_ids),
+		.of_match_table	= ov5670_dt_ids,
 	},
 	.probe_new = ov5670_probe,
 	.remove = ov5670_remove,
