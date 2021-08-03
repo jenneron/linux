@@ -59,6 +59,27 @@
 		pinctrl-names = "default";
 		pinctrl-0 = <&usb_id_default>;
 	};
+
+	reg_cam_avdd: regulator-cam-avdd {
+		compatible = "regulator-fixed";
+		regulator-name = "CAM_L17_2P85,VREG_L17_2P85";
+		regulator-min-microvolt = <2850000>;
+		regulator-max-microvolt = <2850000>;
+		statup-delay-us = <300>;
+		vin-supply = <&pm8916_l17>;
+	};
+
+	reg_cam_dvdd: regulator-cam-dvdd {
+		compatible = "regulator-fixed";
+		regulator-name = "CAM_L2_1P2,VREG_L2_1P2";
+		regulator-min-microvolt = <1200000>;
+		regulator-max-microvolt = <1200000>;
+		gpio = <&msmgpio 21 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		statup-delay-us = <300>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&reg_cam_dvdd_default>;
+	};
 };
 
 &blsp_i2c2 {
@@ -113,9 +134,9 @@
 		compatible = "ovti,ov5670";
 		reg = <0x20>;
 
-		DVDD-supply = <&pm8916_l2>;
 		DOVDD-supply = <&pm8916_l6>;
-		AVDD-supply = <&pm8916_l17>;
+		AVDD-supply = <&reg_cam_avdd>;
+		DVDD-supply = <&reg_cam_dvdd>;
 
 		clocks = <&gcc GCC_CAMSS_MCLK1_CLK>;
 		clock-names = "xvclk";
@@ -192,6 +213,14 @@
 
 		drive-strength = <2>;
 		bias-disable;
+	};
+
+	reg_cam_dvdd_default: reg-cam-dvdd-default {
+		pins = "gpio21";
+		function = "gpio";
+
+		drive-strength = <2>;
+		bias-pull-down;
 	};
 
 	spk_ext_pa_left_default: spk-ext-pa-left-default {
