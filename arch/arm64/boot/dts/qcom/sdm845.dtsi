@@ -5852,7 +5852,7 @@
 			};
 		};
 
-		cluster1-thermal {
+		cluster1_thermal: cluster1-thermal {
 			polling-delay-passive = <250>;
 
 			thermal-sensors = <&tsens0 6>;
