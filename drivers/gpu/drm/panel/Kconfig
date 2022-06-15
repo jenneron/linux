@@ -466,6 +466,18 @@ config DRM_PANEL_INNOLUX_P079ZCA
 	  24 bit RGB per pixel. It provides a MIPI DSI interface to
 	  the host and has a built-in LED backlight.
 
+config DRM_PANEL_INNOLUX_TD4328
+	tristate "Innolux TD4328 DSI command mode panels (AYN Odin)"
+	depends on OF
+	depends on DRM_MIPI_DSI
+	depends on BACKLIGHT_CLASS_DEVICE
+	default DRM_PANEL_SYNAPTICS_TD4328
+	help
+	  Say Y here if you want to enable support for the Innolux panels
+	  with a Synaptics TD4328 controller fitted to the AYN Odin. They
+	  have a 1080x1920 resolution and are driven over a four lane MIPI
+	  DSI link in command mode.
+
 config DRM_PANEL_JADARD_JD9365DA_H3
 	tristate "Jadard JD9365DA-H3 WXGA DSI panel"
 	depends on OF
