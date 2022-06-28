@@ -624,6 +624,18 @@ static const struct adc5_channels adc5_chans_rev2[ADC5_MAX_CHANNEL] = {
 					SCALE_HW_CALIB_THERM_100K_PULLUP)
 	[ADC5_XO_THERM_100K_PU]	= ADC5_CHAN_TEMP("xo_therm_100k_pu", 0,
 					SCALE_HW_CALIB_THERM_100K_PULLUP)
+	[ADC5_GPIO1]		= ADC5_CHAN_VOLT("gpio1", 0,
+					SCALE_HW_CALIB_DEFAULT)
+	[ADC5_GPIO2]		= ADC5_CHAN_VOLT("gpio2", 0,
+					SCALE_HW_CALIB_DEFAULT)
+	[ADC5_GPIO3]		= ADC5_CHAN_VOLT("gpio3", 0,
+				SCALE_HW_CALIB_DEFAULT)
+	[ADC5_GPIO4]		= ADC5_CHAN_VOLT("gpio4", 0,
+				SCALE_HW_CALIB_DEFAULT)
+	[ADC5_GPIO5]		= ADC5_CHAN_VOLT("gpio5", 0,
+					SCALE_HW_CALIB_DEFAULT)
+	[ADC5_GPIO6_DIV3]	= ADC5_CHAN_VOLT("gpio6", 0,
+				SCALE_HW_CALIB_DEFAULT)
 };
 
 static int adc5_get_fw_channel_data(struct adc5_chip *adc,
