@@ -1524,6 +1524,11 @@ struct task_struct {
 	/* Pause tracing: */
 	atomic_t			tracing_graph_pause;
 #endif
+	/*
+	 * Whether the task wants to use compat input syscalls even if it's
+	 * a 64-bit process.
+	 */
+	bool compat_input;
 
 #ifdef CONFIG_TRACING
 	/* Bitmask and counter of trace recursion: */
