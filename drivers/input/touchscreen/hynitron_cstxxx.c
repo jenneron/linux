@@ -21,6 +21,7 @@
 #include <linux/input/touchscreen.h>
 #include <linux/module.h>
 #include <linux/property.h>
+#include <linux/regulator/consumer.h>
 #include <linux/unaligned.h>
 
 /* Per chip data */
@@ -40,6 +41,7 @@ struct hynitron_ts_data {
 	struct input_dev *input_dev;
 	struct touchscreen_properties prop;
 	struct gpio_desc *reset_gpio;
+	struct regulator *vdd;
 };
 
 /*
@@ -252,6 +254,7 @@ static void cst3xx_report_contact(struct hynitron_ts_data *ts_data,
 	input_mt_report_slot_state(ts_data->input_dev, MT_TOOL_FINGER, 1);
 	touchscreen_report_pos(ts_data->input_dev, &ts_data->prop, x, y, true);
 	input_report_abs(ts_data->input_dev, ABS_MT_TOUCH_MAJOR, w);
+	input_report_abs(ts_data->input_dev, ABS_MT_WIDTH_MAJOR, w);
 }
 
 static int cst3xx_finish_touch_read(struct i2c_client *client)
@@ -440,11 +443,25 @@ static int hyn_probe(struct i2c_client *client)
 		return err;
 	}
 
+	ts_data->vdd = devm_regulator_get(&client->dev, "vdd");
+	if (IS_ERR(ts_data->vdd)) {
+		err = PTR_ERR(ts_data->vdd);
+		if (err != -EPROBE_DEFER)
+			dev_err(&client->dev, "Failed to request vdd regulator: %d\n", err);
+		return err;
+	}
+
+	err = regulator_enable(ts_data->vdd);
+	if (err) {
+		dev_err(&client->dev, "enable regulator failed: %d\n", err);
+		return err;
+	}
+
 	hyn_reset_proc(client, 60);
 
-	err = ts_data->chip->bootloader_enter(client);
-	if (err < 0)
-		return err;
+	// err = ts_data->chip->bootloader_enter(client);
+	// if (err < 0)
+	// 	return err;
 
 	err = ts_data->chip->init_input(client);
 	if (err < 0)
