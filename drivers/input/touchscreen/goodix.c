@@ -409,6 +409,10 @@ static void goodix_ts_report_touch_8b(struct goodix_ts_data *ts, u8 *coor_data)
 	int input_w = get_unaligned_le16(&coor_data[5]);
 
 	input_mt_slot(ts->input_dev, id);
+	if (ts->scale_to_x) {
+		input_x = (u32)input_x * ts->scale_to_x / ts->native_x;
+		input_y = (u32)input_y * ts->scale_to_y / ts->native_y;
+	}
 	input_mt_report_slot_state(ts->input_dev, MT_TOOL_FINGER, true);
 	touchscreen_report_pos(ts->input_dev, &ts->prop,
 			       input_x, input_y, true);
@@ -424,6 +428,10 @@ static void goodix_ts_report_touch_9b(struct goodix_ts_data *ts, u8 *coor_data)
 	int input_w = get_unaligned_le16(&coor_data[7]);
 
 	input_mt_slot(ts->input_dev, id);
+	if (ts->scale_to_x) {
+		input_x = (u32)input_x * ts->scale_to_x / ts->native_x;
+		input_y = (u32)input_y * ts->scale_to_y / ts->native_y;
+	}
 	input_mt_report_slot_state(ts->input_dev, MT_TOOL_FINGER, true);
 	touchscreen_report_pos(ts->input_dev, &ts->prop,
 			       input_x, input_y, true);
@@ -1065,6 +1073,39 @@ static void goodix_read_config(struct goodix_ts_data *ts)
 	if (x_max && y_max) {
 		input_abs_set_max(ts->input_dev, ABS_MT_POSITION_X, x_max - 1);
 		input_abs_set_max(ts->input_dev, ABS_MT_POSITION_Y, y_max - 1);
+	}
+
+	/*
+	 * Detect mismatch between GT911 flash config resolution and
+	 * the DT panel resolution, and store parameters for runtime
+	 * coordinate scaling.
+	 */
+	if (!ts->firmware_name) {
+		u32 dt_x = 0, dt_y = 0;
+		struct device *dev = &ts->client->dev;
+
+		device_property_read_u32(dev, "touchscreen-size-x", &dt_x);
+		device_property_read_u32(dev, "touchscreen-size-y", &dt_y);
+
+		if (dt_x && dt_y && (dt_x != x_max || dt_y != y_max)) {
+			if (x_max > GOODIX_MAX_WIDTH ||
+			    y_max > GOODIX_MAX_HEIGHT) {
+				dev_info(dev,
+					 "goodix: config read garbage (%dx%d), assuming 1440x2560 native\n",
+					 x_max, y_max);
+				x_max = 1440;
+				y_max = 2560;
+			}
+
+			dev_info(dev,
+				 "goodix: scaling %dx%d -> DT %dx%d\n",
+				 x_max, y_max, dt_x, dt_y);
+
+			ts->native_x = (u16)x_max;
+			ts->native_y = (u16)y_max;
+			ts->scale_to_x = (u16)dt_x;
+			ts->scale_to_y = (u16)dt_y;
+		}
 	}
 
 	ts->chip->calc_config_checksum(ts);

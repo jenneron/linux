@@ -102,6 +102,15 @@ struct goodix_ts_data {
 	unsigned short keymap[GOODIX_MAX_KEYS];
 	u8 main_clk[GOODIX_MAIN_CLK_LEN];
 	int bak_ref_len;
+	/*
+	 * Runtime coordinate scaling for panel variants that share
+	 * OTA firmware.  When the GT911 flash config resolution
+	 * differs from the physical panel, scale_to_* stores the DT
+	 * resolution and native_* stores the GT911 native range.
+	 * Touch coordinates are scaled by scale_to / native before
+	 * reporting.  scale_to_x == 0 means no scaling.
+	 */
+	u16 scale_to_x, scale_to_y, native_x, native_y;
 	u8 *bak_ref;
 };
 
