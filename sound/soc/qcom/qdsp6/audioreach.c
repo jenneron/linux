@@ -707,6 +707,7 @@ static int audioreach_codec_dma_set_media_format(struct q6apm_graph *graph,
 						 const struct audioreach_module_config *cfg)
 {
 	struct apm_codec_dma_module_intf_cfg *intf_cfg;
+	static u8 last_active_channel_mask;
 	struct apm_module_frame_size_factor_cfg *fs_cfg;
 	struct apm_module_hw_ep_power_mode_cfg *pm_cfg;
 	struct apm_module_param_data *param_data;
@@ -761,6 +762,21 @@ static int audioreach_codec_dma_set_media_format(struct q6apm_graph *graph,
 	for (i = 0; i < AR_PCM_MAX_NUM_CHANNEL; i++)
 		if (cfg->channel_map[i])
 			intf_cfg->cfg.active_channels_mask |= BIT(i);
+
+	/*
+	 * Dedicated WSA2 RX0: the ADSP has no WSA2 DMA, so the topology marks
+	 * the interface as LPAIF type 7 and it is played out on channels 2-3
+	 * of the WSA (type 2) interface instead.
+	 */
+	if (intf_cfg->cfg.intf_index == 1 && cfg->num_channels <= 2 &&
+	    (intf_cfg->cfg.lpaif_type == 7 ||
+	     (intf_cfg->cfg.lpaif_type == 2 &&
+	      ((last_active_channel_mask >> 2) & 0x3)))) {
+		intf_cfg->cfg.active_channels_mask =
+			((1 << cfg->num_channels) - 1) << 2;
+		last_active_channel_mask = intf_cfg->cfg.active_channels_mask;
+		intf_cfg->cfg.lpaif_type = 2;
+	}
 
 	p += ic_sz;
 
