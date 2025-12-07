@@ -121,6 +121,21 @@
 			reg = <0x6000>, <0x6100>;
 			reg-names = "rtc", "alarm";
 			interrupts = <0x0 0x61 0x1 IRQ_TYPE_NONE>;
+
+			nvmem-cells = <&rtc_offset>;
+			nvmem-cell-names = "offset";
+		};
+
+		pm8150_sdam_2: nvram@b100 {
+			compatible = "qcom,spmi-sdam";
+			reg = <0xb100>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0 0xb100 0x100>;
+
+			rtc_offset: rtc-offset@bc {
+				reg = <0xbc 0x4>;
+			};
 		};
 
 		pm8150_gpios: gpio@c000 {
