@@ -160,6 +160,9 @@ extern const struct clk_ops clk_dyn_rcg_ops;
  * @cfg_off: defines the cfg register offset from the CMD_RCGR + CFG_REG
  * @parked_cfg: cached value of the CFG register for parked RCGs
  * @hw_clk_ctrl: whether to enable hardware clock control
+ * @no_update_when_off: on a pixel RCG, write a new rate into the config
+ *			registers without toggling the update bit while the
+ *			RCG is off
  */
 struct clk_rcg2 {
 	u32			cmd_rcgr;
@@ -175,6 +178,7 @@ struct clk_rcg2 {
 	u8			cfg_off;
 	u32			parked_cfg;
 	bool			hw_clk_ctrl;
+	bool			no_update_when_off;
 };
 
 #define to_clk_rcg2(_hw) container_of(to_clk_regmap(_hw), struct clk_rcg2, clkr)
