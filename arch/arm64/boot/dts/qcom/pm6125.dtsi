@@ -154,5 +154,13 @@
 	pmic@1 {
 		compatible = "qcom,pm6125", "qcom,spmi-pmic";
 		reg = <0x1 SPMI_USID>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		pm6125_pwm: pwm {
+			compatible = "qcom,pm6125-pwm";
+			#pwm-cells = <2>;
+			status = "disabled";
+		};
 	};
 };
