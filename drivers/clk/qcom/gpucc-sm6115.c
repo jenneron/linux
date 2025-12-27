@@ -38,7 +38,7 @@ enum {
 };
 
 static const struct pll_vco default_vco[] = {
-	{ 1000000000, 2000000000, 0 },
+	{ 1000000000, 2100000000, 0 },
 };
 
 static const struct pll_vco pll1_vco[] = {
@@ -215,6 +215,7 @@ static const struct freq_tbl ftbl_gpu_cc_gx_gfx3d_clk_src[] = {
 	F(900000000, P_GPU_CC_PLL0_OUT_AUX2, 2, 0, 0),
 	F(950000000, P_GPU_CC_PLL0_OUT_AUX2, 2, 0, 0),
 	F(980000000, P_GPU_CC_PLL0_OUT_AUX2, 2, 0, 0),
+	F(1050000000, P_GPU_CC_PLL0_OUT_AUX2, 2, 0, 0),
 	{ }
 };
 

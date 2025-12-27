@@ -877,7 +877,7 @@ static struct rpmpd *sm6115_rpmpds[] = {
 static const struct rpmpd_desc sm6115_desc = {
 	.rpmpds = sm6115_rpmpds,
 	.num_pds = ARRAY_SIZE(sm6115_rpmpds),
-	.max_state = RPM_SMD_LEVEL_TURBO_NO_CPR,
+	.max_state = RPM_SMD_LEVEL_BINNING,
 };
 
 static struct rpmpd *sm6125_rpmpds[] = {

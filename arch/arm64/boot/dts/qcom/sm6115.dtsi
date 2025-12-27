@@ -429,6 +429,10 @@
 						rpmpd_opp_turbo_plus: opp8 {
 							opp-level = <RPM_SMD_LEVEL_TURBO_NO_CPR>;
 						};
+
+						rpmpd_opp_turbo_high: opp9 {
+							opp-level = <464>;
+						};
 					};
 				};
 			};
@@ -1759,37 +1763,37 @@
 				opp-320000000 {
 					opp-hz = /bits/ 64 <320000000>;
 					required-opps = <&rpmpd_opp_low_svs>;
-					opp-supported-hw = <0x1f>;
+					opp-supported-hw = <0x3f>;
 				};
 
 				opp-465000000 {
 					opp-hz = /bits/ 64 <465000000>;
 					required-opps = <&rpmpd_opp_svs>;
-					opp-supported-hw = <0x1f>;
+					opp-supported-hw = <0x3f>;
 				};
 
 				opp-600000000 {
 					opp-hz = /bits/ 64 <600000000>;
 					required-opps = <&rpmpd_opp_svs_plus>;
-					opp-supported-hw = <0x1f>;
+					opp-supported-hw = <0x3f>;
 				};
 
 				opp-745000000 {
 					opp-hz = /bits/ 64 <745000000>;
 					required-opps = <&rpmpd_opp_nom>;
-					opp-supported-hw = <0xf>;
+					opp-supported-hw = <0x2f>;
 				};
 
 				opp-820000000 {
 					opp-hz = /bits/ 64 <820000000>;
 					required-opps = <&rpmpd_opp_nom_plus>;
-					opp-supported-hw = <0x7>;
+					opp-supported-hw = <0x27>;
 				};
 
 				opp-900000000 {
 					opp-hz = /bits/ 64 <900000000>;
 					required-opps = <&rpmpd_opp_turbo>;
-					opp-supported-hw = <0x7>;
+					opp-supported-hw = <0x27>;
 				};
 
 				/* Speed bin 2 can reach 950 Mhz instead of 980 like the rest. */
@@ -1802,8 +1806,14 @@
 				opp-980000000 {
 					opp-hz = /bits/ 64 <980000000>;
 					required-opps = <&rpmpd_opp_turbo_plus>;
-					opp-supported-hw = <0x3>;
+					opp-supported-hw = <0x23>;
 				};
+
+				opp-1050000000 {
+					opp-hz = /bits/ 64 <1050000000>;
+					required-opps = <&rpmpd_opp_turbo_high>;
+					opp-supported-hw = <0x20>;
+				};				
 			};
 		};
 

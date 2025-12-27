@@ -706,11 +706,12 @@ static const struct adreno_info a6xx_gpus[] = {
 		 * table is only valid for bengal.
 		 */
 		.speedbins = ADRENO_SPEEDBINS(
-			{ 0,   0 },
+			{ 0,   5 },
 			{ 206, 1 },
 			{ 200, 2 },
 			{ 157, 3 },
 			{ 127, 4 },
+			{ 221, 5 },
 		),
 	}, {
 		.chip_ids = ADRENO_CHIP_IDS(0x06010200),
