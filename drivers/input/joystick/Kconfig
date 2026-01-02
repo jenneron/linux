@@ -341,6 +341,16 @@ config JOYSTICK_WALKERA0701
 	  To compile this driver as a module, choose M here: the
 	  module will be called walkera0701.
 
+config JOYSTICK_MANGMI
+	tristate "Mangmi game controller"
+	depends on SERIAL_DEV_BUS
+	depends on DRM || !DRM
+	help
+	  Say Y here if you want to use the Mangmi game controller with your computer.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called mangmi.
+
 config JOYSTICK_MAPLE
 	tristate "Dreamcast control pad"
 	depends on MAPLE
