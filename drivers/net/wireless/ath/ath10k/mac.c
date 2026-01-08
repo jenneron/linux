@@ -29,6 +29,86 @@
 #include "wow.h"
 #include "leds.h"
 
+extern const char *qcom_serial_number;
+
+/* Define a small struct for storing a 6-byte MAC address array */
+struct macaddr_t {
+	u8 b[ETH_ALEN];
+};
+
+/**
+ * generate_macaddr_from_serial - Generates a MAC_ADDR using the serial number
+ * @macaddr: Pointer to macaddr_t structure to populate
+ *
+ * This function sets the first 3 bytes to 00:03:7F and the last 3 bytes
+ * are derived from the last 6 characters of qcom_serial_number.
+ *
+ * Returns 0 on success, negative error code on failure.
+ */
+static int generate_macaddr_from_serial(struct ath10k *ar, struct macaddr_t *macaddr)
+{
+	size_t serial_len;
+	const char *serial = qcom_serial_number;
+	char last6[7] = {0}; // 6 characters + null terminator
+	int i;
+	int ret;
+
+	if (!serial) {
+		ath10k_err(ar, "qcom_serial_number is NULL\n");
+		return -EINVAL;
+	}
+
+	serial_len = strlen(serial);
+	if (serial_len < 6) {
+		ath10k_err(ar, "qcom_serial_number is too short: %zu characters\n", serial_len);
+		return -EINVAL;
+	}
+
+	// Extract the last 6 characters
+	memcpy(last6, serial + serial_len - 6, 6);
+
+	// Initialize the first 3 bytes
+	macaddr->b[5] = 0x00;
+	macaddr->b[4] = 0x03;
+	macaddr->b[3] = 0x7F;
+
+	// Convert the last 6 characters into 3 bytes
+	for (i = 0; i < 3; i++) {
+		char byte_str[3] = {0};
+		u8 byte_val;
+
+		byte_str[0] = last6[i * 2];
+		byte_str[1] = last6[i * 2 + 1];
+
+		if (!isxdigit(byte_str[0]) || !isxdigit(byte_str[1])) {
+			ath10k_err(ar, "Invalid hex characters in serial number: %c%c\n",
+				   byte_str[0], byte_str[1]);
+			return -EINVAL;
+		}
+
+		ret = kstrtou8(byte_str, 16, &byte_val);
+		if (ret < 0) {
+			ath10k_err(ar, "Failed to convert hex string to u8: %c%c\n",
+				   byte_str[0], byte_str[1]);
+			return ret;
+		}
+
+		macaddr->b[2 - i] = byte_val; // Assign to bytes 2,1,0
+	}
+
+	ath10k_info(ar, "Generated MAC_ADDR: %pM\n", macaddr->b);
+
+	return 0;
+}
+
+static void ath10k_reverse_mac(u8 *dst, const u8 *src)
+{
+	int i;
+
+	for (i = 0; i < ETH_ALEN; i++)
+		dst[i] = src[ETH_ALEN - 1 - i];
+}
+
 /*********/
 /* Rates */
 /*********/
@@ -9997,10 +10077,18 @@ int ath10k_mac_register(struct ath10k *ar)
 	struct ieee80211_supported_band *band;
 	void *channels;
 	int ret;
+	struct macaddr_t generated_macaddr;
 
 	if (!is_valid_ether_addr(ar->mac_addr)) {
-		ath10k_warn(ar, "invalid MAC address; choosing random\n");
-		eth_random_addr(ar->mac_addr);
+		ret = generate_macaddr_from_serial(ar, &generated_macaddr);
+		if (ret == 0) {
+			/* If successful, use the newly generated MAC address. */
+			ath10k_reverse_mac(ar->mac_addr, generated_macaddr.b);
+			ath10k_info(ar, "MAC_ADDR set to %pM from serial\n", ar->mac_addr);
+		} else {
+			ath10k_warn(ar, "invalid MAC address and serial generation failed; choosing random\n");
+			eth_random_addr(ar->mac_addr);
+		}
 	}
 	SET_IEEE80211_PERM_ADDR(ar->hw, ar->mac_addr);
 
