@@ -2,6 +2,7 @@
 obj-$(CONFIG_DRM_PANEL_ABT_Y030XX067A) += panel-abt-y030xx067a.o
 obj-$(CONFIG_DRM_PANEL_AR06_4INCH) += panel-ar06-4inch.o
 obj-$(CONFIG_DRM_PANEL_AR02_3INCH) += panel-ar02-3inch.o
+obj-$(CONFIG_DRM_PANEL_AR14) += panel-ar14-144hz.o
 obj-$(CONFIG_DRM_PANEL_ANBERNIC_TD4310) += panel-anbernic-td4310.o
 obj-$(CONFIG_DRM_PANEL_ARM_VERSATILE) += panel-arm-versatile.o
 obj-$(CONFIG_DRM_PANEL_ASUS_Z00T_TM5P5_NT35596) += panel-asus-z00t-tm5p5-n35596.o
