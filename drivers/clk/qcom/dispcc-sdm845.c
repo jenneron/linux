@@ -764,6 +764,7 @@ static struct gdsc mdss_gdsc = {
 	.en_rest_wait_val = 0x5,
 	.pd = {
 		.name = "mdss_gdsc",
+		.flags = GENPD_FLAG_NO_STAY_ON,
 	},
 	.pwrsts = PWRSTS_OFF_ON,
 	.flags = HW_CTRL | POLL_CFG_GDSCR,
