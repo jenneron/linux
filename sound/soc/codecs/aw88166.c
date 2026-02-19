@@ -13,6 +13,7 @@
 #include <linux/gpio/consumer.h>
 #include <linux/i2c.h>
 #include <linux/minmax.h>
+#include <linux/of.h>
 #include <linux/regmap.h>
 #include <sound/soc.h>
 #include "aw88166.h"
@@ -799,8 +800,9 @@ pll_check_fail:
 static int aw_dev_dsp_update_container(struct aw_device *aw_dev,
 			unsigned char *data, unsigned int len, unsigned short base)
 {
-	u32 tmp_len;
 	int i, ret;
+#ifdef AW88166_DSP_I2C_WRITES
+	u32 tmp_len;
 
 	ret = regmap_write(aw_dev->regmap, AW88166_DSPMADD_REG, base);
 	if (ret)
@@ -813,6 +815,22 @@ static int aw_dev_dsp_update_container(struct aw_device *aw_dev,
 		if (ret)
 			return ret;
 	}
+#else
+	__be16 reg_val;
+
+	/* i2c write */
+	ret = regmap_write(aw_dev->regmap, AW88166_DSPMADD_REG, base);
+	if (ret)
+		return ret;
+
+	for (i = 0; i < len; i += 2) {
+		reg_val = cpu_to_be16p((u16 *)(data + i));
+		ret = regmap_write(aw_dev->regmap, AW88166_DSPMDAT_REG,
+					(u16)reg_val);
+		if (ret)
+			return ret;
+	}
+#endif
 
 	return 0;
 }
@@ -1800,9 +1818,16 @@ static const struct i2c_device_id aw88166_i2c_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, aw88166_i2c_id);
 
+static const struct of_device_id aw88166_of_match[] = {
+	{ .compatible = "awinic,aw88166" },
+	{ /* sentinel */ }
+};
+MODULE_DEVICE_TABLE(of, aw88166_of_match);
+
 static struct i2c_driver aw88166_i2c_driver = {
 	.driver = {
 		.name = AW88166_I2C_NAME,
+		.of_match_table = aw88166_of_match,
 	},
 	.probe = aw88166_i2c_probe,
 	.id_table = aw88166_i2c_id,
