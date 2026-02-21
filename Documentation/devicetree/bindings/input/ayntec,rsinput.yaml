@@ -96,6 +96,18 @@ properties:
     description:
       The triggers are switches. Report them as buttons instead of axes.
 
+  auto-center:
+    type: boolean
+    description:
+      Take the stick positions in the first status frame as the centers,
+      for MCUs that report a non-zero position at rest.
+
+  mcu-watchdog:
+    type: boolean
+    description:
+      Probe the MCU link periodically, and reopen the UART and then
+      power-cycle the MCU when it stops answering.
+
 required:
   - compatible
   - vdd-supply

@@ -15,6 +15,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/serdev.h>
 #include <linux/slab.h>
+#include <linux/workqueue.h>
 #include <uapi/linux/sched/types.h>
 
 #define FRAME_HEAD_1              0xA5
@@ -69,6 +70,16 @@ struct rsinput_driver {
     bool invert_ry;
     bool digital_triggers;
     bool calibrated;
+    bool auto_center;
+    bool centered;
+    int center[4];
+    bool mcu_watchdog;
+    struct delayed_work rx_watchdog;
+    unsigned int valid_frames;
+    unsigned int wd_seen_frames;
+    unsigned int wd_attempts;
+    unsigned int wd_probes;
+    bool version_logged;
     u32 axis_range;
     u32 trigger_left_deadzone;
     u32 trigger_right_deadzone;
@@ -161,6 +172,11 @@ static const unsigned int keymap[] = {
     BTN_THUMBL,  BTN_THUMBR,    BTN_MODE,	   BTN_BACK
 };
 
+#define RSINPUT_WD_DELAY          msecs_to_jiffies(1000)
+#define RSINPUT_WD_PATROL         msecs_to_jiffies(5000)
+#define RSINPUT_WD_MCU_BOOT       msecs_to_jiffies(3000)
+#define RSINPUT_WD_PORT_CYCLES    2
+
 static uint8_t compute_checksum(const uint8_t *data, size_t len) {
     uint8_t checksum = 0;
 
@@ -198,6 +214,24 @@ static int rsinput_send_command(struct rsinput_driver *drv, uint8_t cmd, const u
     frame[frame_len++] = checksum;
 
     return serdev_device_write_buf(drv->serdev, frame, frame_len);
+}
+
+static void rsinput_power_up(struct rsinput_driver *drv) {
+    if (drv->boot_gpio)
+        gpiod_set_value_cansleep(drv->boot_gpio, 0);
+
+    if (drv->reset_gpio)
+        gpiod_set_value_cansleep(drv->reset_gpio, 0);
+
+    msleep(20);
+
+    if (drv->enable_gpio)
+        gpiod_set_value_cansleep(drv->enable_gpio, 1);
+
+    if (drv->reset_gpio)
+        gpiod_set_value_cansleep(drv->reset_gpio, 1);
+
+    msleep(50);
 }
 
 static int rsinput_init_commands(struct rsinput_driver *drv) {
@@ -238,7 +272,10 @@ static void handle_cmd_commod(struct rsinput_driver *drv, const uint8_t *data, s
                 }
                 memcpy(mcu_version, &data[FRAME_POS_DATA_1], version_length);
                 mcu_version[version_length] = '\0';
-                dev_info(&drv->serdev->dev, "MCU Version: %s\n", mcu_version);
+                if (!drv->version_logged) {
+                    dev_info(&drv->serdev->dev, "MCU Version: %s\n", mcu_version);
+                    drv->version_logged = true;
+                }
             } else {
                 dev_err(&drv->serdev->dev, "Invalid MCU version response length\n");
             }
@@ -264,8 +301,9 @@ static int rsinput_trigger(u16 raw, u32 deadzone) {
     return val < (int)deadzone ? 0 : val;
 }
 
-static int rsinput_axis(struct rsinput_driver *drv, const uint8_t *p, bool invert) {
-    int val = -(int16_t)(p[0] | (p[1] << 8));
+static int rsinput_axis(struct rsinput_driver *drv, const uint8_t *p, int center,
+                        bool invert) {
+    int val = -(int16_t)(p[0] | (p[1] << 8)) + center;
 
     if (invert)
         val = -val;
@@ -374,6 +412,26 @@ static void handle_cmd_status(struct rsinput_driver *drv, const uint8_t *data, s
     u16 raw_l = data[FRAME_POS_DATA_3] | (data[FRAME_POS_DATA_4] << 8);
     u16 raw_r = data[FRAME_POS_DATA_5] | (data[FRAME_POS_DATA_6] << 8);
 
+    /*
+     * Some MCUs report a non-zero stick position at rest: take the first
+     * status frame as the center. The calibration tool's centers follow
+     * it, so a later update_params keeps the same zero point.
+     */
+    if (drv->auto_center && !drv->centered) {
+        for (i = 0; i < 4; i++) {
+            const uint8_t *p = &data[FRAME_POS_DATA_7 + 2 * i];
+
+            drv->center[i] = (int16_t)(p[0] | (p[1] << 8));
+        }
+        axis_leftx_center = drv->center[0];
+        axis_lefty_center = drv->center[1];
+        axis_rightx_center = drv->center[2];
+        axis_righty_center = drv->center[3];
+        drv->centered = true;
+        dev_info(&drv->serdev->dev, "stick centers: %d %d %d %d\n",
+                 drv->center[0], drv->center[1], drv->center[2], drv->center[3]);
+    }
+
     if (drv->digital_triggers) {
         input_report_key(drv->input, BTN_TL2, raw_l != 0);
         input_report_key(drv->input, BTN_TR2, raw_r != 0);
@@ -389,10 +447,10 @@ static void handle_cmd_status(struct rsinput_driver *drv, const uint8_t *data, s
                              rsinput_trigger(raw_r, drv->trigger_right_deadzone));
         }
 
-        input_report_abs(drv->input, ABS_X, rsinput_axis(drv, &data[FRAME_POS_DATA_7], drv->invert_x));
-        input_report_abs(drv->input, ABS_Y, rsinput_axis(drv, &data[FRAME_POS_DATA_9], drv->invert_y));
-        input_report_abs(drv->input, ABS_RX, rsinput_axis(drv, &data[FRAME_POS_DATA_11], drv->invert_rx));
-        input_report_abs(drv->input, ABS_RY, rsinput_axis(drv, &data[FRAME_POS_DATA_13], drv->invert_ry));
+        input_report_abs(drv->input, ABS_X, rsinput_axis(drv, &data[FRAME_POS_DATA_7], drv->center[0], drv->invert_x));
+        input_report_abs(drv->input, ABS_Y, rsinput_axis(drv, &data[FRAME_POS_DATA_9], drv->center[1], drv->invert_y));
+        input_report_abs(drv->input, ABS_RX, rsinput_axis(drv, &data[FRAME_POS_DATA_11], drv->center[2], drv->invert_rx));
+        input_report_abs(drv->input, ABS_RY, rsinput_axis(drv, &data[FRAME_POS_DATA_13], drv->center[3], drv->invert_ry));
     }
 
     input_sync(drv->input);
@@ -425,6 +483,8 @@ static void rsinput_process_data(struct rsinput_driver *drv, const uint8_t *data
             len -= frame_length;
             continue;
         }
+
+        drv->valid_frames++;
 
         switch (data[FRAME_POS_CMD]) {
             case CMD_COMMOD:
@@ -517,6 +577,82 @@ static int rsinput_setup_rumble(struct rsinput_driver *drv) {
 }
 #endif
 
+/*
+ * Some MCUs (the SM4450 and SM6125 Retroid boards) occasionally stop
+ * talking. Probe the link with a version request, cycle the UART if
+ * nothing came back, and power-cycle the MCU if that does not help.
+ */
+static void rsinput_rx_watchdog(struct work_struct *work) {
+    struct rsinput_driver *drv =
+        container_of(to_delayed_work(work), struct rsinput_driver, rx_watchdog);
+    uint8_t version_request[] = {DATA_COMMOD_VERSION};
+    unsigned long delay = RSINPUT_WD_DELAY;
+    int error;
+
+    if (drv->wd_probes > 0 && drv->valid_frames != drv->wd_seen_frames) {
+        if (drv->wd_attempts) {
+            dev_info(&drv->serdev->dev,
+                     "link alive after %u recovery attempt(s)\n",
+                     drv->wd_attempts);
+            drv->wd_attempts = 0;
+        }
+        delay = RSINPUT_WD_PATROL;
+    } else if (drv->wd_probes > 0) {
+        drv->wd_attempts++;
+
+        serdev_device_close(drv->serdev);
+
+        if (drv->wd_attempts <= RSINPUT_WD_PORT_CYCLES) {
+            dev_warn(&drv->serdev->dev,
+                     "link silent, cycling port (attempt %u)\n",
+                     drv->wd_attempts);
+        } else {
+            if (drv->wd_attempts <= RSINPUT_WD_PORT_CYCLES + 3)
+                dev_warn(&drv->serdev->dev,
+                         "link still silent, power-cycling MCU (attempt %u)\n",
+                         drv->wd_attempts);
+
+            if (drv->enable_gpio)
+                gpiod_set_value_cansleep(drv->enable_gpio, 0);
+            regulator_disable(drv->vdd);
+            msleep(100);
+            error = regulator_enable(drv->vdd);
+            if (error)
+                dev_err(&drv->serdev->dev,
+                        "Unable to re-enable MCU supply: %d\n", error);
+            rsinput_power_up(drv);
+
+            delay = RSINPUT_WD_MCU_BOOT;
+        }
+
+        error = serdev_device_open(drv->serdev);
+        if (error) {
+            dev_err(&drv->serdev->dev,
+                    "Unable to re-open UART device, retrying\n");
+            schedule_delayed_work(&drv->rx_watchdog, RSINPUT_WD_PATROL);
+            return;
+        }
+        serdev_device_set_baudrate(drv->serdev, 115200);
+        serdev_device_set_flow_control(drv->serdev, false);
+
+        if (drv->wd_attempts > RSINPUT_WD_PORT_CYCLES) {
+            error = rsinput_init_commands(drv);
+            if (error < 0)
+                dev_err(&drv->serdev->dev,
+                        "MCU re-init failed: %d\n", error);
+            /* Back off on an MCU that stays dead */
+            if (drv->wd_attempts > RSINPUT_WD_PORT_CYCLES + 3)
+                delay = 6 * RSINPUT_WD_PATROL;
+        }
+    }
+
+    drv->wd_seen_frames = drv->valid_frames;
+    rsinput_send_command(drv, CMD_COMMOD, version_request,
+                         sizeof(version_request));
+    drv->wd_probes++;
+    schedule_delayed_work(&drv->rx_watchdog, delay);
+}
+
 static int rsinput_probe(struct serdev_device *serdev) {
     struct rsinput_driver *drv;
     u32 gamepad_bus = 0;
@@ -534,6 +670,9 @@ static int rsinput_probe(struct serdev_device *serdev) {
     drv->invert_rx = device_property_read_bool(&serdev->dev, "invert-rx");
     drv->invert_ry = device_property_read_bool(&serdev->dev, "invert-ry");
     drv->digital_triggers = device_property_read_bool(&serdev->dev, "digital-triggers");
+    drv->auto_center = device_property_read_bool(&serdev->dev, "auto-center");
+    drv->mcu_watchdog = device_property_read_bool(&serdev->dev, "mcu-watchdog");
+    INIT_DELAYED_WORK(&drv->rx_watchdog, rsinput_rx_watchdog);
 
     drv->axis_range = AXIS_RANGE_DEFAULT;
     device_property_read_u32(&serdev->dev, "axis-range", &drv->axis_range);
@@ -574,21 +713,7 @@ static int rsinput_probe(struct serdev_device *serdev) {
 		return error;
 	}
 
-    if (drv->boot_gpio)
-        gpiod_set_value_cansleep(drv->boot_gpio, 0);
-
-    if (drv->reset_gpio)
-        gpiod_set_value_cansleep(drv->reset_gpio, 0);
-
-    msleep(20);
-
-    if (drv->enable_gpio)
-        gpiod_set_value_cansleep(drv->enable_gpio, 1);
-
-    if (drv->reset_gpio)
-        gpiod_set_value_cansleep(drv->reset_gpio, 1);
-
-    msleep(50);
+    rsinput_power_up(drv);
 
     error = serdev_device_open(serdev);
     if (error)
@@ -662,6 +787,9 @@ static int rsinput_probe(struct serdev_device *serdev) {
         return error;
     }
 
+    if (drv->mcu_watchdog)
+        schedule_delayed_work(&drv->rx_watchdog, RSINPUT_WD_DELAY);
+
     return 0;
 }
 
@@ -670,6 +798,7 @@ static int rsinput_suspend(struct device *dev)
     struct serdev_device *serdev = to_serdev_device(dev);
     struct rsinput_driver *drv = serdev_device_get_drvdata(serdev);
 
+    cancel_delayed_work_sync(&drv->rx_watchdog);
     serdev_device_close(serdev);
 
     if (drv->enable_gpio)
@@ -725,6 +854,13 @@ static int rsinput_resume(struct device *dev)
         return error;
     }
 
+    /* Start over so the suspend gap is not taken for a dead link */
+    if (drv->mcu_watchdog) {
+        drv->wd_probes = 0;
+        drv->wd_attempts = 0;
+        schedule_delayed_work(&drv->rx_watchdog, RSINPUT_WD_DELAY);
+    }
+
     return 0;
 }
 
@@ -733,6 +869,7 @@ static DEFINE_SIMPLE_DEV_PM_OPS(rsinput_pm_ops, rsinput_suspend, rsinput_resume)
 static void rsinput_remove(struct serdev_device *serdev) {
     struct rsinput_driver *drv = serdev_device_get_drvdata(serdev);
 
+    cancel_delayed_work_sync(&drv->rx_watchdog);
     serdev_device_close(serdev);
     input_unregister_device(drv->input);
     if (drv->enable_gpio)
