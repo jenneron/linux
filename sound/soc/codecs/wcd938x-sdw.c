@@ -145,6 +145,9 @@ static int wcd9380_interrupt_callback(struct sdw_slave *slave,
 {
 	struct wcd938x_sdw_priv *wcd = dev_get_drvdata(&slave->dev);
 
+	if (!wcd->is_tx || !wcd->slave_irq)
+		return IRQ_NONE;
+
 	return wcd_interrupt_callback(slave, wcd->slave_irq, WCD938X_DIGITAL_INTR_STATUS_0,
 				WCD938X_DIGITAL_INTR_STATUS_1, WCD938X_DIGITAL_INTR_STATUS_2);
 }
