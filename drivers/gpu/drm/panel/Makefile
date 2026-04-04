@@ -62,6 +62,7 @@ obj-$(CONFIG_DRM_PANEL_LXD_M9189A) += panel-lxd-m9189a.o
 obj-$(CONFIG_DRM_PANEL_MAGNACHIP_D53E6EA8966) += panel-magnachip-d53e6ea8966.o
 obj-$(CONFIG_DRM_PANEL_MANGMI_HX83112A) += panel-hx83112a.o
 obj-$(CONFIG_DRM_PANEL_MANGMI_BM5460BB1) += panel-bm5460bb1.o
+obj-$(CONFIG_DRM_PANEL_MANGMI_TD4310) += panel-td4310.o
 obj-$(CONFIG_DRM_PANEL_MANGMI_AIR_Y_PRO) += panel-mangmi-air-y-pro.o
 obj-$(CONFIG_DRM_PANEL_MOTOROLA_MOT) += panel-motorola-mot.o
 obj-$(CONFIG_DRM_PANEL_NEC_NL8048HL11) += panel-nec-nl8048hl11.o
