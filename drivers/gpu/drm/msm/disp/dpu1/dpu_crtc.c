@@ -1464,16 +1464,23 @@ static int dpu_crtc_assign_resources(struct drm_crtc *crtc,
 
 	dpu_rm_release(global_state, crtc);
 
+	cstate = to_dpu_crtc_state(crtc_state);
+	cstate->num_mixers = 0;
+
 	if (!crtc_state->enable)
 		return 0;
 
 	topology = dpu_crtc_get_topology(crtc, dpu_kms, crtc_state);
 	ret = dpu_rm_reserve(&dpu_kms->rm, global_state,
 			     crtc_state->crtc, &topology);
-	if (ret)
+	if (ret) {
+		/*
+		 * Release on reserve failure to since partial reservation will prevent
+		 * future reservation from working.
+		 */
+		dpu_rm_release(global_state, crtc);
 		return ret;
-
-	cstate = to_dpu_crtc_state(crtc_state);
+	}
 
 	num_ctl = dpu_rm_get_assigned_resources(&dpu_kms->rm, global_state,
 						crtc_state->crtc,
