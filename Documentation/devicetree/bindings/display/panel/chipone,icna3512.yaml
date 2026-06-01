@@ -37,6 +37,7 @@ properties:
               - ayaneo,pocketds-panel-top
               - ayaneo,pocketevo-panel
               - ayntec,odin2portal-panel
+              - mangmi,pocket-max-panel
           - const: chipone,icna3512
 
       - items:
