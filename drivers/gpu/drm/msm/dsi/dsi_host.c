@@ -1075,7 +1075,7 @@ static void dsi_timing_setup(struct msm_dsi_host *msm_host, bool is_bonded_dsi)
 		h_total -= hdisplay;
 		if (wide_bus_enabled) {
 			if (msm_host->mode_flags & MIPI_DSI_MODE_VIDEO)
-				bits_per_pclk = dsc->bits_per_component * 3;
+				bits_per_pclk = mipi_dsi_pixel_format_to_bpp(msm_host->format);
 			else
 				bits_per_pclk = 48;
 		} else {
