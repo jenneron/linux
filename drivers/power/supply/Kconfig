@@ -846,6 +846,14 @@ config CHARGER_BQ25630
 	help
 	  Say Y to enable support for the TI BQ25630 battery charger.
 
+config CHARGER_HL7139
+	tristate "Halo Microelectronics HL7139 charge pump"
+	depends on I2C
+	select REGMAP_I2C
+	help
+	  Say Y to enable support for the Halo Microelectronics HL7139
+	  charge pump.
+
 config CHARGER_BQ256XX
 	tristate "TI BQ256XX battery charger driver"
 	depends on I2C
