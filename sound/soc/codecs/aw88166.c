@@ -102,7 +102,7 @@ static int aw_dev_get_iis_status(struct aw_device *aw_dev)
 	if (ret)
 		return ret;
 	if ((reg_val & AW88166_BIT_PLL_CHECK) != AW88166_BIT_PLL_CHECK) {
-		dev_err(aw_dev->dev, "check pll lock fail, reg_val:0x%04x", reg_val);
+		dev_dbg(aw_dev->dev, "check pll lock fail, reg_val:0x%04x", reg_val);
 		return -EINVAL;
 	}
 
@@ -116,7 +116,7 @@ static int aw_dev_check_pll(struct aw_device *aw_dev)
 	for (i = 0; i < AW88166_DEV_SYSST_CHECK_MAX; i++) {
 		ret = aw_dev_get_iis_status(aw_dev);
 		if (ret) {
-			dev_err(aw_dev->dev, "mode1 iis signal check error");
+			dev_dbg(aw_dev->dev, "iis signal check error");
 			usleep_range(AW88166_2000_US, AW88166_2000_US + 10);
 		} else {
 			return 0;
@@ -191,7 +191,7 @@ static int aw_dev_check_sysst(struct aw_device *aw_dev)
 			return ret;
 
 		if ((reg_val & (~AW88166_BIT_SYSST_CHECK_MASK) & check_val) != check_val) {
-			dev_err(aw_dev->dev, "check sysst fail, cnt=%d, reg_val=0x%04x, check:0x%x",
+			dev_dbg(aw_dev->dev, "check sysst fail, cnt=%d, reg_val=0x%04x, check:0x%x",
 				i, reg_val, AW88166_BIT_SYSST_NOSWS_CHECK);
 			usleep_range(AW88166_2000_US, AW88166_2000_US + 10);
 		} else {
@@ -722,7 +722,7 @@ static int aw88166_dev_start(struct aw88166 *aw88166)
 
 	ret = aw88166_dev_configure_syspll(aw88166);
 	if (ret) {
-		dev_err(aw_dev->dev, "pll check failed cannot start\n");
+		dev_dbg(aw_dev->dev, "pll check failed\n");
 		goto pll_check_fail;
 	}
 
@@ -733,7 +733,7 @@ static int aw88166_dev_start(struct aw88166 *aw88166)
 	/* check i2s status */
 	ret = aw_dev_check_sysst(aw_dev);
 	if (ret) {
-		dev_err(aw_dev->dev, "sysst check failed\n");
+		dev_dbg(aw_dev->dev, "sysst check failed\n");
 		goto sysst_check_fail;
 	}
 
@@ -1160,10 +1160,14 @@ static void aw88166_start_pa(struct aw88166 *aw88166)
 	for (i = 0; i < AW88166_START_RETRIES; i++) {
 		ret = aw88166_dev_start(aw88166);
 		if (ret) {
-			dev_err(aw88166->aw_pa->dev, "aw88166 device start failed. retry = %d", i);
-			ret = aw88166_dev_fw_update(aw88166, AW88166_DSP_FW_UPDATE_ON, true);
-			if (ret) {
-				dev_err(aw88166->aw_pa->dev, "fw update failed");
+			int fw_ret;
+
+			dev_dbg(aw88166->aw_pa->dev,
+				"aw88166_dev_start failed, cnt:%d, ret:%d\n", i, ret);
+			fw_ret = aw88166_dev_fw_update(aw88166, AW88166_DSP_FW_UPDATE_ON, true);
+			if (fw_ret) {
+				dev_dbg(aw88166->aw_pa->dev,
+					"aw88166_dev_fw_update failed, cnt:%d, ret:%d\n", i, fw_ret);
 				continue;
 			}
 		} else {
@@ -1171,6 +1175,8 @@ static void aw88166_start_pa(struct aw88166 *aw88166)
 			break;
 		}
 	}
+	if (ret != 0)
+		dev_err(aw88166->aw_pa->dev, "start failure (%d)\n", ret);
 }
 
 static void aw88166_startup_work(struct work_struct *work)
