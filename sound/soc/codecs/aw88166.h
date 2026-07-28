@@ -539,8 +539,8 @@
 #define AW88166_DSP_RE_SHIFT			(12)
 #define AW88166_CALI_RE_MAX			(15000)
 #define AW88166_CALI_RE_MIN			(4000)
-#define AW88166_VOLUME_STEP_DB			(64)
-#define AW88166_VOL_DEFAULT_VALUE		(0)
+#define AW88166_CTL_MAX_VOL		(AW88166_MUTE_VOL / 2)
+#define AW88166_CTL_DEFAULT_VOL		(AW88166_CTL_MAX_VOL / 2)
 #define AW88166_DSP_RE_TO_SHOW_RE(re, shift)	(((re) * (1000)) >> (shift))
 #define AW88166_SHOW_RE_TO_DSP_RE(re, shift)	(((re) << shift) / (1000))
 
