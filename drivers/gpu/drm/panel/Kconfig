@@ -1467,6 +1467,20 @@ config DRM_PANEL_AYANEO_WT0600_1K
 
 	  To compile this driver as a module, choose M here.
 
+config DRM_PANEL_AYANEO_AR16_4INCH
+	tristate "AYANEO AR16 4-inch video mode panel"
+	depends on OF
+	depends on DRM_MIPI_DSI
+	depends on BACKLIGHT_CLASS_DEVICE
+	select DRM_DISPLAY_HELPER
+	help
+	  Say Y here if you want to enable support for the 1280x960 60 Hz
+	  AR16 4-inch video mode panel used by the AYANEO Pocket S Mini.
+	  The driver controls the panel reset, supply rails and backlight, and
+	  sends the stock initialization sequence over a four-lane DSI link.
+
+	  To compile this driver as a module, choose M here.
+
 config DRM_PANEL_XINPENG_XPP055C272
 	tristate "Xinpeng XPP055C272 panel driver"
 	depends on OF
