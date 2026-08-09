@@ -477,6 +477,18 @@ config TOUCHSCREEN_HYNITRON_CSTXXX
 	  To compile this driver as a module, choose M here: the
 	  module will be called hynitron-cstxxx.
 
+config TOUCHSCREEN_HYNITRON_CST66XX
+	tristate "Hynitron CST66xx touchscreen"
+	depends on I2C
+	help
+	  Say Y here if you have a touchscreen using a Hynitron CST66xx
+	  controller. This runtime-only driver reads multitouch reports and
+	  does not contain or update controller firmware.
+	  It supports up to five simultaneous touch contacts.
+
+	  To compile this driver as a module, choose M here: the module will
+	  be called hynitron-cst66xx.
+
 config TOUCHSCREEN_HYNITRON_CST816X
 	tristate "Hynitron CST816x touchscreen"
 	depends on I2C
