@@ -27,6 +27,11 @@ properties:
       If present, a board or platform specific string used to lookup
       usecase-specific firmware files for the device.
 
+  qcom,skip-11d-scan-offload:
+    type: boolean
+    description:
+      Disable the firmware 11d scan offload on affected platforms.
+
   vddaon-supply:
     description: VDD_AON supply regulator handle
 

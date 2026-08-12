@@ -7,6 +7,7 @@
 #include <net/mac80211.h>
 #include <net/cfg80211.h>
 #include <linux/etherdevice.h>
+#include <linux/of.h>
 
 #include "mac.h"
 #include "core.h"
@@ -10370,6 +10371,12 @@ void ath12k_mac_11d_scan_start(struct ath12k *ar, u32 vdev_id)
 	int ret;
 
 	lockdep_assert_wiphy(ath12k_ar_to_hw(ar)->wiphy);
+
+	if (of_property_read_bool(dev_of_node(ar->ab->dev),
+				  "qcom,skip-11d-scan-offload")) {
+		ath12k_info(ar->ab, "skipping 11d scan offload\n");
+		goto fin;
+	}
 
 	if (ar->regdom_set_by_user)
 		goto fin;
