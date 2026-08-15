@@ -2704,6 +2704,7 @@ int ath12k_wmi_send_scan_start_cmd(struct ath12k *ar,
 		arg->scan_priority = WMI_SCAN_PRIORITY_MEDIUM;
 	else
 		arg->scan_priority = WMI_SCAN_PRIORITY_LOW;
+	cmd->scan_priority = cpu_to_le32(arg->scan_priority);
 	cmd->notify_scan_events = cpu_to_le32(arg->notify_scan_events);
 
 	ath12k_wmi_copy_scan_event_cntrl_flags(cmd, arg);
