@@ -15,8 +15,10 @@ properties:
       - const: visionox,vtdr6130
       - description: RetroidPocket panels with the VTDR6130 driver IC
         enum:
+          - retroidpocket,rp5-visionox-panel
           - retroidpocket,rp6-panel
           - retroidpocket,rpduo-panel-top
+          - retroidpocket,rpflip2-visionox-panel
 
   reg:
     maxItems: 1
@@ -29,6 +31,10 @@ properties:
     description: 1.8V supply of the panel module
   vdd28-supply:
     description: 2.8V supply of the panel module
+  vdd1v2-supply:
+    description: 1.2V supply of the panel module
+  avdd-supply:
+    description: analog supply of the panel module
   port: true
   reset-gpios: true
   rotation: true
@@ -37,7 +43,6 @@ required:
   - compatible
   - reg
   - vddio-supply
-  - vci-supply
   - vdd-supply
   - reset-gpios
   - port
@@ -53,6 +58,27 @@ allOf:
       properties:
         vdd18-supply: false
         vdd28-supply: false
+  - if:
+      properties:
+        compatible:
+          contains:
+            enum:
+              - retroidpocket,rp5-visionox-panel
+              - retroidpocket,rpflip2-visionox-panel
+    then:
+      properties:
+        vci-supply: false
+        vdd18-supply: false
+        vdd28-supply: false
+      required:
+        - vdd1v2-supply
+        - avdd-supply
+    else:
+      properties:
+        vdd1v2-supply: false
+        avdd-supply: false
+      required:
+        - vci-supply
 
 additionalProperties: false
 

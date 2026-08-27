@@ -63,6 +63,13 @@ static const struct regulator_bulk_data retroidpocket_rp6_supplies[] = {
 	{ .supply = "vdd28" },
 };
 
+static const struct regulator_bulk_data retroidpocket_rp5_supplies[] = {
+	{ .supply = "vdd1v2" },
+	{ .supply = "vddio" },
+	{ .supply = "vdd" },
+	{ .supply = "avdd" },
+};
+
 static inline struct visionox_vtdr6130 *to_visionox_vtdr6130(struct drm_panel *panel)
 {
 	return container_of(panel, struct visionox_vtdr6130, panel);
@@ -625,6 +632,22 @@ static const struct visionox_vtdr6130_desc retroidpocket_rp6_desc = {
 	.frame_len_60 = 0x7d0,
 };
 
+/* The SM8250 Retroid Pocket 5 and Flip 2 VTDR6130 panel is the RP6 panel */
+static const struct visionox_vtdr6130_desc retroidpocket_rp5_desc = {
+	.supplies = retroidpocket_rp5_supplies,
+	.num_supplies = ARRAY_SIZE(retroidpocket_rp5_supplies),
+	.modes = retroidpocket_rp6_modes,
+	.num_modes = ARRAY_SIZE(retroidpocket_rp6_modes),
+	.mode_flags = MIPI_DSI_MODE_NO_EOT_PACKET |
+		      MIPI_DSI_CLOCK_NON_CONTINUOUS,
+	.dsc = &retroidpocket_rp6_dsc,
+	.reset_delay_ms = 20,
+	.on = retroidpocket_rp6_on,
+	.attr_group = &retroidpocket_rp6_attr_group,
+	.frame_len_120 = 0x1c,
+	.frame_len_60 = 0x7d0,
+};
+
 static int visionox_vtdr6130_probe(struct mipi_dsi_device *dsi)
 {
 	struct device *dev = &dsi->dev;
@@ -689,8 +712,10 @@ static int visionox_vtdr6130_probe(struct mipi_dsi_device *dsi)
 }
 
 static const struct of_device_id visionox_vtdr6130_of_match[] = {
+	{ .compatible = "retroidpocket,rp5-visionox-panel", .data = &retroidpocket_rp5_desc },
 	{ .compatible = "retroidpocket,rp6-panel", .data = &retroidpocket_rp6_desc },
 	{ .compatible = "retroidpocket,rpduo-panel-top", .data = &retroidpocket_rp6_desc },
+	{ .compatible = "retroidpocket,rpflip2-visionox-panel", .data = &retroidpocket_rp5_desc },
 	{ .compatible = "visionox,vtdr6130", .data = &visionox_vtdr6130_desc },
 	{ /* sentinel */ }
 };
