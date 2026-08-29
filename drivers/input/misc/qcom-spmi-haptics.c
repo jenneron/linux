@@ -530,19 +530,27 @@ static int spmi_haptics_init(struct spmi_haptics *haptics)
 	if (ret < 0)
 		return ret;
 
-	/*
-	 * Configure auto resonance
-	 * see spmi_haptics_lra_auto_res_config downstream
-	 * This is greatly simplified.
-	 */
-	val = FIELD_PREP(LRA_RES_CAL_MASK, ilog2(32 / HAP_RES_CAL_PERIOD_MIN)) |
-	      FIELD_PREP(LRA_AUTO_RES_MODE_MASK, HAP_AUTO_RES_ZXD_EOP) |
-	      FIELD_PREP(LRA_HIGH_Z_MASK, 1);
+	if (haptics->actuator_type == HAP_TYPE_LRA) {
+		/*
+		 * Configure auto resonance
+		 * see spmi_haptics_lra_auto_res_config downstream
+		 * This is greatly simplified.
+		 */
+		val = FIELD_PREP(LRA_RES_CAL_MASK, ilog2(32 / HAP_RES_CAL_PERIOD_MIN)) |
+		      FIELD_PREP(LRA_AUTO_RES_MODE_MASK, HAP_AUTO_RES_ZXD_EOP) |
+		      FIELD_PREP(LRA_HIGH_Z_MASK, 1);
 
-	mask = LRA_AUTO_RES_MODE_MASK | LRA_HIGH_Z_MASK | LRA_RES_CAL_MASK;
+		mask = LRA_AUTO_RES_MODE_MASK | LRA_HIGH_Z_MASK | LRA_RES_CAL_MASK;
 
-	ret = spmi_haptics_write_masked(haptics, haptics->base + HAP_LRA_AUTO_RES_REG,
-			mask, val);
+		ret = spmi_haptics_write_masked(haptics, haptics->base + HAP_LRA_AUTO_RES_REG,
+				mask, val);
+	} else {
+		val = 0;
+		ret = spmi_haptics_write(haptics, haptics->base + HAP_LRA_AUTO_RES_REG,
+					 &val, 1);
+	}
+	if (ret < 0)
+		return ret;
 
 	/* Configure the PLAY MODE register */
 	ret = spmi_haptics_write_play_mode(haptics);
@@ -837,18 +845,21 @@ static int spmi_haptics_probe(struct platform_device *pdev)
 		goto register_fail;
 	}
 
-	// We only support LRAs for now
 	haptics->actuator_type = HAP_TYPE_LRA;
 	ret = of_property_read_u32(node, "qcom,actuator-type", &val);
 	if (!ret) {
+		if (val != HAP_TYPE_LRA && val != HAP_TYPE_ERM) {
+			dev_err(&pdev->dev, "qcom,actuator-type (%d) isn't supported\n", val);
+			ret = -EINVAL;
+			goto register_fail;
+		}
 		haptics->actuator_type = val;
 	}
 
-	// Only buffer mode is currently supported
 	haptics->play_mode = HAP_PLAY_BUFFER;
 	ret = of_property_read_u32(node, "qcom,play-mode", &val);
 	if (!ret) {
-		if (val != HAP_PLAY_BUFFER) {
+		if (val != HAP_PLAY_DIRECT && val != HAP_PLAY_BUFFER) {
 			dev_err(&pdev->dev, "qcom,play-mode (%d) isn't supported\n", val);
 			ret = -EINVAL;
 			goto register_fail;
