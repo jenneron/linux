@@ -45,6 +45,7 @@ struct pwm_fan_ctx {
 	enum pwm_fan_enable_mode enable_mode;
 	bool regulator_enabled;
 	bool enabled;
+	bool pwm_inverted;
 
 	int tach_count;
 	struct pwm_fan_tach *tachs;
@@ -65,6 +66,16 @@ struct pwm_fan_ctx {
 	u32 pwm_usec_from_stopped;
 	u8 pwm_shutdown;
 };
+
+static u64 pwm_fan_pwm_to_duty(struct pwm_fan_ctx *ctx, unsigned long pwm)
+{
+	unsigned long period = ctx->pwm_state.period;
+
+	if (ctx->pwm_inverted)
+		pwm = MAX_PWM - pwm;
+
+	return DIV_ROUND_UP_ULL((u64)pwm * (period - 1), MAX_PWM);
+}
 
 /* This handler assumes self resetting edge triggered interrupt. */
 static irqreturn_t pulse_handler(int irq, void *dev_id)
@@ -204,7 +215,6 @@ static int  __set_pwm(struct pwm_fan_ctx *ctx, unsigned long pwm)
 {
 	struct pwm_state *state = &ctx->pwm_state;
 	unsigned long final_pwm = pwm;
-	unsigned long period;
 	bool update = false;
 	int ret = 0;
 
@@ -213,19 +223,18 @@ static int  __set_pwm(struct pwm_fan_ctx *ctx, unsigned long pwm)
 			/* pwm-fan hard disabled */
 			return 0;
 
-		period = state->period;
 		update = state->duty_cycle < ctx->pwm_duty_cycle_from_stopped;
 		if (update)
 			state->duty_cycle = ctx->pwm_duty_cycle_from_stopped;
 		else
-			state->duty_cycle = DIV_ROUND_UP(pwm * (period - 1), MAX_PWM);
+			state->duty_cycle = pwm_fan_pwm_to_duty(ctx, pwm);
 		ret = pwm_apply_might_sleep(ctx->pwm, state);
 		if (ret)
 			return ret;
 		ret = pwm_fan_power_on(ctx);
 		if (!ret && update) {
 			pwm = final_pwm;
-			state->duty_cycle = DIV_ROUND_UP(pwm * (period - 1), MAX_PWM);
+			state->duty_cycle = pwm_fan_pwm_to_duty(ctx, pwm);
 			usleep_range(ctx->pwm_usec_from_stopped,
 				     ctx->pwm_usec_from_stopped * 2);
 			ret = pwm_apply_might_sleep(ctx->pwm, state);
@@ -536,6 +545,7 @@ static int pwm_fan_probe(struct platform_device *pdev)
 	}
 
 	pwm_init_state(ctx->pwm, &ctx->pwm_state);
+	ctx->pwm_inverted = device_property_read_bool(dev, "pwm-inverted");
 
 	/*
 	 * PWM fans are controlled solely by the duty cycle of the PWM signal,
@@ -555,7 +565,10 @@ static int pwm_fan_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	ctx->enable_mode = pwm_disable_reg_enable;
+	if (device_property_read_bool(dev, "fan-supply-off-on-zero"))
+		ctx->enable_mode = pwm_disable_reg_disable;
+	else
+		ctx->enable_mode = pwm_disable_reg_enable;
 
 	ret = pwm_fan_get_cooling_data(dev, ctx);
 	if (ret)
@@ -566,12 +579,21 @@ static int pwm_fan_probe(struct platform_device *pdev)
 	 * maximum cooling level, and let thermal management take over.
 	 */
 	initial_pwm = 70;
+	device_property_read_u32(dev, "initial-pwm", &initial_pwm);
+	initial_pwm = min_t(u32, initial_pwm, MAX_PWM);
 
 	/*
 	 * Set the boot duty cycle and enable PWM output as well as the
-	 * regulator. In case of error nothing is changed
+	 * regulator, unless the fan should start stopped. In case of error
+	 * nothing is changed.
 	 */
-	ret = set_pwm(ctx, initial_pwm);
+	if (initial_pwm) {
+		ret = set_pwm(ctx, initial_pwm);
+	} else {
+		ctx->pwm_state.enabled = false;
+		ctx->pwm_state.duty_cycle = 0;
+		ret = pwm_apply_might_sleep(ctx->pwm, &ctx->pwm_state);
+	}
 	if (ret) {
 		dev_err(dev, "Failed to configure PWM: %d\n", ret);
 		return ret;
@@ -668,10 +690,13 @@ static int pwm_fan_probe(struct platform_device *pdev)
 	ret = device_property_read_u32(dev, "fan-stop-to-start-percent",
 				       &pwm_min_from_stopped);
 	if (!ret && pwm_min_from_stopped) {
+		unsigned long start_pwm;
+
+		pwm_min_from_stopped = clamp_val(pwm_min_from_stopped, 0, 100);
+		start_pwm = DIV_ROUND_CLOSEST(pwm_min_from_stopped * MAX_PWM,
+					      100);
 		ctx->pwm_duty_cycle_from_stopped =
-			DIV_ROUND_UP_ULL(pwm_min_from_stopped *
-					 (ctx->pwm_state.period - 1),
-					 100);
+			pwm_fan_pwm_to_duty(ctx, start_pwm);
 	}
 	ret = device_property_read_u32(dev, "fan-stop-to-start-us",
 				       &ctx->pwm_usec_from_stopped);
@@ -688,7 +713,8 @@ static int pwm_fan_probe(struct platform_device *pdev)
 		return PTR_ERR(hwmon);
 	}
 
-	ctx->pwm_fan_state = ctx->pwm_fan_max_state;
+	if (ctx->pwm_fan_cooling_levels)
+		pwm_fan_update_state(ctx, initial_pwm);
 	if (IS_ENABLED(CONFIG_THERMAL)) {
 		cdev = devm_thermal_of_child_cooling_device_register(dev, dev->of_node,
 								     "pwm-fan", ctx,
