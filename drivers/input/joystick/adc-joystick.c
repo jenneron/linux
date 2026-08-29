@@ -41,7 +41,13 @@ static void adc_joystick_poll(struct input_dev *input)
 	int i, val, ret;
 
 	for (i = 0; i < joy->num_chans; i++) {
-		ret = iio_read_channel_raw(&joy->chans[i], &val);
+		struct iio_channel *chan = &joy->chans[i];
+
+		if (iio_channel_has_info(chan->channel, IIO_CHAN_INFO_RAW))
+			ret = iio_read_channel_raw(chan, &val);
+		else
+			ret = iio_read_channel_processed(chan, &val);
+
 		if (ret < 0)
 			return;
 		if (joy->axes[i].inverted)
