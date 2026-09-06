@@ -235,6 +235,16 @@ config DRM_PANEL_FOCALTECH_OTA7290B
 	  to enable support for this panel. To compile this driver as a module,
 	  choose M here.
 
+config DRM_PANEL_FOCALTECH_FT7131M
+	tristate "FocalTech FT7131M 1080x1920 DSI video mode panel"
+	depends on OF
+	depends on DRM_MIPI_DSI
+	depends on BACKLIGHT_CLASS_DEVICE
+	help
+	  Say Y here if you want to enable support for the FocalTech FT7131M
+	  4-lane 1080x1920 MIPI DSI video mode panel, as fitted to the
+	  Anbernic RG 55G1 handheld.
+
 config DRM_PANEL_DSI_CM
 	tristate "Generic DSI command mode panels"
 	depends on OF
