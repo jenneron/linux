@@ -434,6 +434,19 @@ config JOYSTICK_N64
 	  Say Y here if you want enable support for the four
 	  built-in controller ports on the Nintendo 64 console.
 
+config JOYSTICK_SINGLEADC_JOYPAD
+	tristate "Single-ADC / MCU SPI handheld gamepad"
+	depends on OF
+	depends on SPI
+	help
+	  Say Y here to enable support for the handheld gamepad found on
+	  Anbernic SM4450 devices such as the RG 55G1, where the digital
+	  buttons are GPIOs and the analog axes are read from an MCU over
+	  SPI.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called singleadc-joypad.
+
 config JOYSTICK_SENSEHAT
 	tristate "Raspberry Pi Sense HAT joystick"
 	depends on INPUT && I2C
