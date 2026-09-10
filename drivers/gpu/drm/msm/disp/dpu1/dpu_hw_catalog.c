@@ -390,6 +390,10 @@ static const struct dpu_sspp_sub_blks dpu_vig_sblk_qseed3_3_3_rot_v2 =
 static const struct dpu_sspp_sub_blks dpu_vig_sblk_qseed3_3_4 =
 				_VIG_SBLK(SSPP_SCALER_VER(3, 4));
 
+static const struct dpu_sspp_sub_blks dpu_vig_sblk_qseed3_3_4_rot_v2 =
+			_VIG_SBLK_ROT(SSPP_SCALER_VER(3, 4),
+				      &dpu_rot_sm8550_cfg_v201);
+
 static const struct dpu_sspp_sub_blks dpu_vig_sblk_qseed3_3_5 =
 				_VIG_SBLK_REC0_REC1(SSPP_SCALER_VER(3, 5));
 
