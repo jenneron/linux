@@ -541,6 +541,7 @@ static const struct of_device_id mdss_dt_match[] = {
 	{ .compatible = "qcom,sc7280-mdss", .data = &data_74k },
 	{ .compatible = "qcom,sc8180x-mdss", .data = &data_76k8 },
 	{ .compatible = "qcom,sc8280xp-mdss", .data = &data_76k8 },
+	{ .compatible = "qcom,sm4450-mdss", .data = &data_74k },
 	{ .compatible = "qcom,sm6115-mdss", .data = &data_76k8 },
 	{ .compatible = "qcom,sm6125-mdss", .data = &data_76k8 },
 	{ .compatible = "qcom,sm6150-mdss", .data = &data_76k8 },

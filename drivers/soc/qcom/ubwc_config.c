@@ -148,6 +148,7 @@ static const struct of_device_id qcom_ubwc_configs[] __maybe_unused = {
 	{ .compatible = "qcom,sdm845", .data = &ubwc_2_0_hbb15, },
 	{ .compatible = "qcom,shikra", .data = &ubwc_0_0_hbb15, },
 	{ .compatible = "qcom,sm4250", .data = &ubwc_1_0_hbb14, },
+	{ .compatible = "qcom,sm4450", .data = &ubwc_2_0_hbb14, },
 	{ .compatible = "qcom,sm6115", .data = &ubwc_1_0_hbb14, },
 	{ .compatible = "qcom,sm6125", .data = &ubwc_1_0_hbb14, },
 	{ .compatible = "qcom,sm6150", .data = &ubwc_2_0_hbb14, },
