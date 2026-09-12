@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: GPL-2.0
+config VIDEO_QCOM_SDE_ROTATOR
+	tristate "Qualcomm SDE mem2mem rotator"
+	depends on V4L_MEM2MEM_DRIVERS
+	depends on VIDEO_DEV && (ARCH_QCOM || COMPILE_TEST)
+	select VIDEOBUF2_DMA_CONTIG
+	select V4L2_MEM2MEM_DEV
+	help
+	  V4L2 mem2mem driver for the standalone SDE rotator block found in
+	  the MDSS of Qualcomm SoCs. Provides 90/180/270 rotation
+	  and H/V flip of RGB buffers in dedicated hardware,
+	  offloading rotation from the GPU.
