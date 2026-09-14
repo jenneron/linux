@@ -26,6 +26,8 @@
 #define VBIF_OUT_WR_LIM_CONF0		0x00D4
 #define VBIF_OUT_AXI_AMEMTYPE_CONF0	0x0160
 #define VBIF_OUT_AXI_AMEMTYPE_CONF1	0x0164
+#define VBIF_OUT_AXI_ASHARED		0x0170
+#define VBIF_OUT_AXI_AINNERSHARED	0x0174
 #define VBIF_XIN_PND_ERR		0x0190
 #define VBIF_XIN_SRC_ERR		0x0194
 #define VBIF_XIN_CLR_ERR		0x019C
@@ -82,6 +84,22 @@ static void dpu_hw_set_mem_type(struct dpu_hw_vbif *vbif,
 	reg_val &= ~(0x7 << bit_off);
 	reg_val |= (value & 0x7) << bit_off;
 	DPU_REG_WRITE(c, reg_off, reg_val);
+}
+
+static void dpu_hw_set_mem_type_non_shareable(struct dpu_hw_vbif *vbif,
+		u32 xin_id, u32 value)
+{
+	struct dpu_hw_blk_reg_map *c = &vbif->hw;
+
+	dpu_hw_set_mem_type(vbif, xin_id, value);
+	if (xin_id >= 32)
+		return;
+
+
+	DPU_REG_WRITE(c, VBIF_OUT_AXI_ASHARED,
+		      DPU_REG_READ(c, VBIF_OUT_AXI_ASHARED) & ~BIT(xin_id));
+	DPU_REG_WRITE(c, VBIF_OUT_AXI_AINNERSHARED,
+		      DPU_REG_READ(c, VBIF_OUT_AXI_AINNERSHARED) & ~BIT(xin_id));
 }
 
 static void dpu_hw_set_limit_conf(struct dpu_hw_vbif *vbif,
@@ -208,7 +226,10 @@ static void _setup_vbif_ops(struct dpu_hw_vbif_ops *ops,
 	ops->get_halt_ctrl = dpu_hw_get_halt_ctrl;
 	if (test_bit(DPU_VBIF_QOS_REMAP, &cap))
 		ops->set_qos_remap = dpu_hw_set_qos_remap;
-	ops->set_mem_type = dpu_hw_set_mem_type;
+	if (test_bit(DPU_VBIF_NON_SHAREABLE, &cap))
+		ops->set_mem_type = dpu_hw_set_mem_type_non_shareable;
+	else
+		ops->set_mem_type = dpu_hw_set_mem_type;
 	ops->clear_errors = dpu_hw_clear_errors;
 	ops->set_write_gather_en = dpu_hw_set_write_gather_en;
 }

@@ -132,11 +132,13 @@ enum {
  * VBIF sub-blocks and features
  * @DPU_VBIF_QOS_OTLIM        VBIF supports OT Limit
  * @DPU_VBIF_QOS_REMAP        VBIF supports QoS priority remap
+ * @DPU_VBIF_NON_SHAREABLE    VBIF must mark its AXI traffic non-shareable
  * @DPU_VBIF_MAX              maximum value
  */
 enum {
 	DPU_VBIF_QOS_OTLIM = 0x1,
 	DPU_VBIF_QOS_REMAP,
+	DPU_VBIF_NON_SHAREABLE,
 	DPU_VBIF_MAX
 };
 
