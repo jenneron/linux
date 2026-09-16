@@ -275,6 +275,7 @@ struct dpu_rotation_cfg {
  * @has_idle_pc        indicate if idle power collapse feature is supported
  * @has_3d_merge       indicate if 3D merge is supported
  * @max_linewidth      max linewidth for sspp
+ * @max_linewidth_scaling  max linewidth for a scaled sspp fetch, 0 if same
  * @pixel_ram_size     size of latency hiding and de-tiling buffer in bytes
  * @max_hdeci_exp      max horizontal decimation supported (max is 2^value)
  * @max_vdeci_exp      max vertical decimation supported (max is 2^value)
@@ -288,6 +289,7 @@ struct dpu_caps {
 	bool has_3d_merge;
 	/* SSPP limits */
 	u32 max_linewidth;
+	u32 max_linewidth_scaling;
 	u32 pixel_ram_size;
 	u32 max_hdeci_exp;
 	u32 max_vdeci_exp;

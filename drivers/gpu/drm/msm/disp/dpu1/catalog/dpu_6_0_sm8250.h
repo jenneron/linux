@@ -15,6 +15,7 @@ static const struct dpu_caps sm8250_dpu_caps = {
 	.has_idle_pc = true,
 	.has_3d_merge = true,
 	.max_linewidth = 4096,
+	.max_linewidth_scaling = 2560,
 	.pixel_ram_size = DEFAULT_PIXEL_RAM_SIZE,
 };
 

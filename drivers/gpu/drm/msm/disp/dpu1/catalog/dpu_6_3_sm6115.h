@@ -13,6 +13,7 @@ static const struct dpu_caps sm6115_dpu_caps = {
 	.has_dim_layer = true,
 	.has_idle_pc = true,
 	.max_linewidth = 2160,
+	.max_linewidth_scaling = 2560,
 	.pixel_ram_size = DEFAULT_PIXEL_RAM_SIZE,
 };
 

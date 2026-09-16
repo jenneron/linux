@@ -913,6 +913,7 @@ static int dpu_plane_split(struct drm_plane *plane,
 	struct dpu_sw_pipe_cfg *r_pipe_cfg;
 	const struct drm_display_mode *mode = &crtc_state->adjusted_mode;
 	uint32_t max_linewidth;
+	uint32_t pipe_linewidth;
 	u32 num_lm;
 	int stage_id, num_stages;
 
@@ -981,13 +982,19 @@ static int dpu_plane_split(struct drm_plane *plane,
 		DPU_DEBUG_PLANE(pdpu, "Got clip src:" DRM_RECT_FMT " dst: " DRM_RECT_FMT "\n",
 				DRM_RECT_ARG(&pipe_cfg->src_rect), DRM_RECT_ARG(&pipe_cfg->dst_rect));
 
+		pipe_linewidth = max_linewidth;
+		if (pdpu->catalog->caps->max_linewidth_scaling &&
+		    (drm_rect_width(&pipe_cfg->src_rect) != drm_rect_width(&pipe_cfg->dst_rect) ||
+		     drm_rect_height(&pipe_cfg->src_rect) != drm_rect_height(&pipe_cfg->dst_rect)))
+			pipe_linewidth = pdpu->catalog->caps->max_linewidth_scaling;
+
 		/* Split wide rect into 2 rect */
-		if ((drm_rect_width(&pipe_cfg->src_rect) > max_linewidth) ||
+		if ((drm_rect_width(&pipe_cfg->src_rect) > pipe_linewidth) ||
 		     _dpu_plane_calc_clk(mode, pipe_cfg) > max_mdp_clk_rate) {
 
-			if (drm_rect_width(&pipe_cfg->src_rect) > 2 * max_linewidth) {
+			if (drm_rect_width(&pipe_cfg->src_rect) > 2 * pipe_linewidth) {
 				DPU_DEBUG_PLANE(pdpu, "invalid src " DRM_RECT_FMT " line:%u\n",
-						DRM_RECT_ARG(&pipe_cfg->src_rect), max_linewidth);
+						DRM_RECT_ARG(&pipe_cfg->src_rect), pipe_linewidth);
 				return -E2BIG;
 			}
 
