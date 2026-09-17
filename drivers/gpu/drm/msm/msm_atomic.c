@@ -94,6 +94,8 @@ static void msm_atomic_async_commit(struct msm_kms *kms, int crtc_idx)
 	vblank_put(kms, crtc_mask);
 
 	kms->funcs->complete_commit(kms, crtc_mask);
+	if (kms->funcs->complete_flip)
+		kms->funcs->complete_flip(kms, crtc_mask);
 	unlock_crtcs(kms, crtc_mask);
 	kms->funcs->disable_commit(kms);
 
@@ -315,9 +317,17 @@ fallback:
 	lock_crtcs(kms, crtc_mask);
 	kms->funcs->complete_commit(kms, crtc_mask);
 	unlock_crtcs(kms, crtc_mask);
-	kms->funcs->disable_commit(kms);
+
 
 	drm_atomic_helper_commit_hw_done(state);
+
+	if (kms->funcs->complete_flip) {
+		lock_crtcs(kms, crtc_mask);
+		kms->funcs->complete_flip(kms, crtc_mask);
+		unlock_crtcs(kms, crtc_mask);
+	}
+	kms->funcs->disable_commit(kms);
+
 	drm_atomic_helper_cleanup_planes(dev, state);
 
 	trace_msm_atomic_commit_tail_finish(async, crtc_mask);

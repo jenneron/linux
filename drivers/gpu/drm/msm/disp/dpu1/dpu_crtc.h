@@ -250,6 +250,8 @@ void dpu_crtc_commit_kickoff(struct drm_crtc *crtc);
 
 void dpu_crtc_complete_commit(struct drm_crtc *crtc);
 
+void dpu_crtc_complete_flip(struct drm_crtc *crtc);
+
 struct drm_crtc *dpu_crtc_init(struct drm_device *dev, struct drm_plane *plane,
 			       struct drm_plane *cursor);
 

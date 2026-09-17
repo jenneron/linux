@@ -755,6 +755,10 @@ void dpu_crtc_complete_commit(struct drm_crtc *crtc)
 {
 	trace_dpu_crtc_complete_commit(DRMID(crtc));
 	dpu_core_perf_crtc_update(crtc, 0);
+}
+
+void dpu_crtc_complete_flip(struct drm_crtc *crtc)
+{
 	_dpu_crtc_complete_flip(crtc);
 }
 

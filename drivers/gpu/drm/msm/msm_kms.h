@@ -97,6 +97,8 @@ struct msm_kms_funcs {
 	 */
 	void (*complete_commit)(struct msm_kms *kms, unsigned crtc_mask);
 
+	void (*complete_flip)(struct msm_kms *kms, unsigned crtc_mask);
+
 	/*
 	 * Format handling:
 	 */

@@ -489,6 +489,15 @@ static void dpu_kms_complete_commit(struct msm_kms *kms, unsigned crtc_mask)
 	DPU_ATRACE_END("kms_complete_commit");
 }
 
+static void dpu_kms_complete_flip(struct msm_kms *kms, unsigned crtc_mask)
+{
+	struct dpu_kms *dpu_kms = to_dpu_kms(kms);
+	struct drm_crtc *crtc;
+
+	for_each_crtc_mask(dpu_kms->dev, crtc, crtc_mask)
+		dpu_crtc_complete_flip(crtc);
+}
+
 static void dpu_kms_wait_for_commit_done(struct msm_kms *kms,
 		struct drm_crtc *crtc)
 {
@@ -1078,6 +1087,7 @@ static const struct msm_kms_funcs kms_funcs = {
 	.flush_commit    = dpu_kms_flush_commit,
 	.wait_flush      = dpu_kms_wait_flush,
 	.complete_commit = dpu_kms_complete_commit,
+	.complete_flip   = dpu_kms_complete_flip,
 	.enable_vblank   = dpu_kms_enable_vblank,
 	.disable_vblank  = dpu_kms_disable_vblank,
 	.destroy         = dpu_kms_destroy,
