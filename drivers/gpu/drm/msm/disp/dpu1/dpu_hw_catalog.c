@@ -762,6 +762,11 @@ static const struct dpu_qos_lut_entry sc7180_qos_macrotile[] = {
 	{.fl = 0, .lut = 0x0011223344556677},
 };
 
+
+static const struct dpu_qos_lut_entry sc7180_qos_macrotile_qseed[] = {
+	{.fl = 0, .lut = 0x0011223366777777},
+};
+
 static const struct dpu_qos_lut_entry kaanapali_qos_macrotile[] = {
 	{.fl = 0, .lut = 0x0011223344556666},
 };

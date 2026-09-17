@@ -341,7 +341,9 @@ static const struct dpu_perf_cfg sm8250_perf_data = {
 		{.nentry = ARRAY_SIZE(sc7180_qos_nrt),
 		.entries = sc7180_qos_nrt
 		},
-		/* TODO: macrotile-qseed is different from macrotile */
+		{.nentry = ARRAY_SIZE(sc7180_qos_macrotile_qseed),
+		.entries = sc7180_qos_macrotile_qseed
+		},
 	},
 	.cdp_cfg = {
 		{.rd_enable = 1, .wr_enable = 1},

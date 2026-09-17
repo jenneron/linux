@@ -256,7 +256,8 @@ static void _dpu_plane_set_qos_lut(struct drm_plane *plane,
 {
 	struct dpu_plane *pdpu = to_dpu_plane(plane);
 	struct dpu_hw_qos_cfg cfg;
-	u32 total_fl, lut_usage;
+	u32 total_fl, lut_usage, creq_usage;
+	bool scaling;
 
 	if (!pdpu->is_rt_pipe) {
 		lut_usage = DPU_QOS_LUT_USAGE_NRT;
@@ -270,7 +271,15 @@ static void _dpu_plane_set_qos_lut(struct drm_plane *plane,
 	total_fl = _dpu_plane_calc_fill_level(plane, pipe, lut_usage, fmt,
 				drm_rect_width(&pipe_cfg->src_rect));
 
-	cfg.creq_lut = _dpu_hw_get_qos_lut(&pdpu->catalog->perf->qos_lut_tbl[lut_usage], total_fl);
+
+	creq_usage = lut_usage;
+	scaling = drm_rect_width(&pipe_cfg->src_rect) != drm_rect_width(&pipe_cfg->dst_rect) ||
+		  drm_rect_height(&pipe_cfg->src_rect) != drm_rect_height(&pipe_cfg->dst_rect);
+	if (lut_usage == DPU_QOS_LUT_USAGE_MACROTILE && scaling &&
+	    pdpu->catalog->perf->qos_lut_tbl[DPU_QOS_LUT_USAGE_MACROTILE_QSEED].nentry)
+		creq_usage = DPU_QOS_LUT_USAGE_MACROTILE_QSEED;
+
+	cfg.creq_lut = _dpu_hw_get_qos_lut(&pdpu->catalog->perf->qos_lut_tbl[creq_usage], total_fl);
 	cfg.danger_lut = pdpu->catalog->perf->danger_lut_tbl[lut_usage];
 	cfg.safe_lut = pdpu->catalog->perf->safe_lut_tbl[lut_usage];
 
