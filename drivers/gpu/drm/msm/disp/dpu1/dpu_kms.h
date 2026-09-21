@@ -62,6 +62,8 @@ struct dpu_kms {
 	const struct dpu_mdss_cfg *catalog;
 	const struct qcom_ubwc_cfg_data *mdss;
 
+	struct dpu_hw_rotator *rotator;
+
 	/* io/register spaces: */
 	void __iomem *mmio, *vbif;
 

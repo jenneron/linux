@@ -38,4 +38,8 @@ int dpu_format_populate_plane_sizes(
 		struct drm_framebuffer *fb,
 		struct dpu_hw_fmt_layout *layout);
 
+int dpu_format_get_plane_sizes_ubwc(const struct msm_format *fmt,
+				    u32 width, u32 height,
+				    struct dpu_hw_fmt_layout *layout);
+
 #endif /*_DPU_FORMATS_H */

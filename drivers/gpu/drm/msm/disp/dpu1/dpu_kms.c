@@ -32,6 +32,7 @@
 #include "dpu_encoder.h"
 #include "dpu_formats.h"
 #include "dpu_hw_vbif.h"
+#include "dpu_hw_rotator.h"
 #include "dpu_kms.h"
 #include "dpu_plane.h"
 #include "dpu_vbif.h"
@@ -1236,6 +1237,12 @@ static int dpu_kms_hw_init(struct msm_kms *kms)
 
 	dpu_kms->hw_vbif = hw;
 
+	dpu_kms->rotator = dpu_hw_rotator_init(dev, dpu_kms);
+	if (IS_ERR(dpu_kms->rotator)) {
+		DPU_ERROR("rotator init failed %ld\n", PTR_ERR(dpu_kms->rotator));
+		dpu_kms->rotator = NULL;
+	}
+
 	/* TODO: use the same max_freq as in dpu_kms_hw_init */
 	max_core_clk_rate = dpu_kms_get_clk_rate(dpu_kms, "core");
 	if (!max_core_clk_rate) {
@@ -1448,6 +1455,7 @@ static int __maybe_unused dpu_runtime_suspend(struct device *dev)
 	struct msm_drm_private *priv = platform_get_drvdata(pdev);
 	struct dpu_kms *dpu_kms = to_dpu_kms(priv->kms);
 
+	dpu_hw_rotator_suspend(dpu_kms->rotator);
 	clk_bulk_disable_unprepare(dpu_kms->num_clocks, dpu_kms->clocks);
 
 	for (i = 0; i < dpu_kms->num_paths; i++)
@@ -1472,6 +1480,7 @@ static int __maybe_unused dpu_runtime_resume(struct device *dev)
 		DPU_ERROR("clock enable failed rc:%d\n", rc);
 		return rc;
 	}
+	dpu_hw_rotator_resume(dpu_kms->rotator);
 
 	dpu_vbif_init_memtypes(dpu_kms);
 
@@ -1541,10 +1550,12 @@ static struct platform_driver dpu_driver = {
 
 void __init msm_dpu_register(void)
 {
+	platform_driver_register(&dpu_hw_rotator_driver);
 	platform_driver_register(&dpu_driver);
 }
 
 void __exit msm_dpu_unregister(void)
 {
 	platform_driver_unregister(&dpu_driver);
+	platform_driver_unregister(&dpu_hw_rotator_driver);
 }

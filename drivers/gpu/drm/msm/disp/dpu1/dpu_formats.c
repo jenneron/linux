@@ -55,7 +55,7 @@ static void _dpu_get_v_h_subsample_rate(
 
 static int _dpu_format_populate_plane_sizes_ubwc(
 		const struct msm_format *fmt,
-		struct drm_framebuffer *fb,
+		u32 width, u32 height,
 		struct dpu_hw_fmt_layout *layout)
 {
 	bool meta = MSM_FORMAT_IS_UBWC(fmt);
@@ -69,23 +69,23 @@ static int _dpu_format_populate_plane_sizes_ubwc(
 		if (MSM_FORMAT_IS_DX(fmt)) {
 			if (fmt->flags & MSM_FORMAT_FLAG_UNPACK_TIGHT) {
 				/* can't use round_up() here because 192 is NPoT */
-				stride = roundup(fb->width, 192);
+				stride = roundup(width, 192);
 				stride = round_up(stride * 4 / 3, 256);
 				y_tile_width = 48;
 			} else {
-				stride = round_up(fb->width * 2, 256);
+				stride = round_up(width * 2, 256);
 				y_tile_width = 32;
 			}
 
-			y_sclines = round_up(fb->height, 16);
-			uv_sclines = round_up((fb->height+1)>>1, 16);
+			y_sclines = round_up(height, 16);
+			uv_sclines = round_up((height+1)>>1, 16);
 			y_tile_height = 4;
 		} else {
-			stride = round_up(fb->width, 128);
+			stride = round_up(width, 128);
 			y_tile_width = 32;
 
-			y_sclines = round_up(fb->height, 32);
-			uv_sclines = round_up((fb->height+1)>>1, 32);
+			y_sclines = round_up(height, 32);
+			uv_sclines = round_up((height+1)>>1, 32);
 			y_tile_height = 8;
 		}
 
@@ -100,26 +100,26 @@ static int _dpu_format_populate_plane_sizes_ubwc(
 		if (!meta)
 			return 0;
 
-		y_meta_stride = DIV_ROUND_UP(fb->width, y_tile_width);
+		y_meta_stride = DIV_ROUND_UP(width, y_tile_width);
 		layout->plane_pitch[2] = round_up(y_meta_stride, 64);
 
-		y_meta_scanlines = DIV_ROUND_UP(fb->height, y_tile_height);
+		y_meta_scanlines = DIV_ROUND_UP(height, y_tile_height);
 		y_meta_scanlines = round_up(y_meta_scanlines, 16);
 		layout->plane_size[2] = round_up(layout->plane_pitch[2] *
 			y_meta_scanlines, DPU_UBWC_PLANE_SIZE_ALIGNMENT);
 
-		uv_meta_stride = DIV_ROUND_UP((fb->width+1)>>1, y_tile_width / 2);
+		uv_meta_stride = DIV_ROUND_UP((width+1)>>1, y_tile_width / 2);
 		layout->plane_pitch[3] = round_up(uv_meta_stride, 64);
 
-		uv_meta_scanlines = DIV_ROUND_UP((fb->height+1)>>1, y_tile_height);
+		uv_meta_scanlines = DIV_ROUND_UP((height+1)>>1, y_tile_height);
 		uv_meta_scanlines = round_up(uv_meta_scanlines, 16);
 		layout->plane_size[3] = round_up(layout->plane_pitch[3] *
 			uv_meta_scanlines, DPU_UBWC_PLANE_SIZE_ALIGNMENT);
 	} else {
 		unsigned int rgb_scanlines, rgb_meta_scanlines, rgb_meta_stride;
 
-		layout->plane_pitch[0] = round_up(fb->width * fmt->bpp, 256);
-		rgb_scanlines = round_up(fb->height, 16);
+		layout->plane_pitch[0] = round_up(width * fmt->bpp, 256);
+		rgb_scanlines = round_up(height, 16);
 		layout->plane_size[0] = round_up(layout->plane_pitch[0] *
 			rgb_scanlines, DPU_UBWC_PLANE_SIZE_ALIGNMENT);
 
@@ -129,10 +129,10 @@ static int _dpu_format_populate_plane_sizes_ubwc(
 		/* uAPI leaves plane[1] empty and plane[2] as meta */
 		layout->num_planes += 1;
 
-		rgb_meta_stride = DIV_ROUND_UP(fb->width, 16);
+		rgb_meta_stride = DIV_ROUND_UP(width, 16);
 		layout->plane_pitch[2] = round_up(rgb_meta_stride, 64);
 
-		rgb_meta_scanlines = DIV_ROUND_UP(fb->height, 4);
+		rgb_meta_scanlines = DIV_ROUND_UP(height, 4);
 		rgb_meta_scanlines = round_up(rgb_meta_scanlines, 16);
 
 		layout->plane_size[2] = round_up(layout->plane_pitch[2] *
@@ -239,10 +239,32 @@ int dpu_format_populate_plane_sizes(
 	layout->num_planes = fmt->num_planes;
 
 	if (MSM_FORMAT_IS_UBWC(fmt) || MSM_FORMAT_IS_TILE(fmt))
-		ret = _dpu_format_populate_plane_sizes_ubwc(fmt, fb, layout);
+		ret = _dpu_format_populate_plane_sizes_ubwc(fmt, fb->width,
+							    fb->height, layout);
 	else
 		ret = _dpu_format_populate_plane_sizes_linear(fmt, fb, layout);
 
+	if (ret)
+		return ret;
+
+	for (i = 0; i < DPU_MAX_PLANES; i++)
+		layout->total_size += layout->plane_size[i];
+
+	return 0;
+}
+
+int dpu_format_get_plane_sizes_ubwc(const struct msm_format *fmt,
+				    u32 width, u32 height,
+				    struct dpu_hw_fmt_layout *layout)
+{
+	int ret, i;
+
+	memset(layout, 0, sizeof(struct dpu_hw_fmt_layout));
+	layout->width = width;
+	layout->height = height;
+	layout->num_planes = fmt->num_planes;
+
+	ret = _dpu_format_populate_plane_sizes_ubwc(fmt, width, height, layout);
 	if (ret)
 		return ret;
 
