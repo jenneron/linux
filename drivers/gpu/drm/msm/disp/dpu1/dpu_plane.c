@@ -27,6 +27,7 @@
 #include "dpu_crtc.h"
 #include "dpu_vbif.h"
 #include "dpu_plane.h"
+#include "dpu_plane_rot.h"
 
 #define DPU_DEBUG_PLANE(pl, fmt, ...) DRM_DEBUG_ATOMIC("plane%d " fmt,\
 		(pl) ? (pl)->base.base.id : -1, ##__VA_ARGS__)
@@ -95,6 +96,7 @@ struct dpu_plane {
 	bool is_error;
 	bool is_rt_pipe;
 	const struct dpu_mdss_cfg *catalog;
+	struct dpu_plane_rot rot;
 };
 
 static const uint64_t supported_format_modifiers[] = {
@@ -709,6 +711,14 @@ static int dpu_plane_prepare_fb(struct drm_plane *plane,
 		return ret;
 	}
 
+	if (pstate->needs_rotate) {
+		ret = dpu_plane_rot_prepare(plane, &pdpu->rot, new_state);
+		if (ret) {
+			msm_framebuffer_cleanup(new_state->fb, pstate->needs_dirtyfb);
+			return ret;
+		}
+	}
+
 	return 0;
 }
 
@@ -724,6 +734,9 @@ static void dpu_plane_cleanup_fb(struct drm_plane *plane,
 	old_pstate = to_dpu_plane_state(old_state);
 
 	DPU_DEBUG_PLANE(pdpu, "FB[%u]\n", old_state->fb->base.id);
+
+	dpu_plane_rot_bufs_put(old_pstate->rot_bufs);
+	old_pstate->rot_bufs = NULL;
 
 	msm_framebuffer_cleanup(old_state->fb, old_pstate->needs_dirtyfb);
 }
@@ -1326,6 +1339,12 @@ static int dpu_plane_virtual_assign_resources(struct drm_crtc *crtc,
 	if (!plane_state->fb)
 		return -EINVAL;
 
+	pstate->needs_rotate = false;
+	ret = dpu_plane_rot_check(plane, plane_state, crtc_state, global_state,
+				  crtc, dpu_kms->catalog);
+	if (ret)
+		return ret < 0 ? ret : 0;
+
 	ret = dpu_plane_split(plane, plane_state, crtc_state);
 	if (ret)
 		return ret;
@@ -1605,6 +1624,9 @@ static void dpu_plane_sspp_atomic_update(struct drm_plane *plane,
 
 	dpu_format_populate_addrs(new_state->fb, &pstate->layout);
 
+	if (pstate->needs_rotate)
+		dpu_plane_rot_update(plane, &pdpu->rot, new_state);
+
 	DPU_DEBUG_PLANE(pdpu, "FB[%u] " DRM_RECT_FP_FMT "->crtc%u " DRM_RECT_FMT
 			", %p4cc ubwc %d\n", fb->base.id, DRM_RECT_FP_ARG(&state->src),
 			crtc->base.id, DRM_RECT_ARG(&state->dst),
@@ -1688,6 +1710,7 @@ static void dpu_plane_atomic_update(struct drm_plane *plane,
 static void dpu_plane_destroy_state(struct drm_plane *plane,
 		struct drm_plane_state *state)
 {
+	dpu_plane_rot_bufs_put(to_dpu_plane_state(state)->rot_bufs);
 	__drm_atomic_helper_plane_destroy_state(state);
 	kfree(to_dpu_plane_state(state));
 }
@@ -1718,6 +1741,8 @@ dpu_plane_duplicate_state(struct drm_plane *plane)
 	DPU_DEBUG_PLANE(pdpu, "\n");
 
 	pstate->pending = false;
+	pstate->rot_dst_iova = 0;
+	pstate->rot_bufs = NULL;
 
 	__drm_atomic_helper_plane_duplicate_state(plane, &pstate->base);
 
@@ -1911,6 +1936,8 @@ static struct drm_plane *dpu_plane_init_common(struct drm_device *dev,
 
 	if (inline_rotation)
 		supported_rotations |= DRM_MODE_ROTATE_MASK;
+	else if (!IS_ERR_OR_NULL(kms->rotator))
+		supported_rotations |= DRM_MODE_ROTATE_90 | DRM_MODE_ROTATE_270;
 
 	drm_plane_create_rotation_property(plane,
 		    DRM_MODE_ROTATE_0, supported_rotations);

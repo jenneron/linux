@@ -14,6 +14,8 @@
 #include "dpu_hw_mdss.h"
 #include "dpu_hw_sspp.h"
 
+struct dpu_plane_rot_bufs;
+
 /**
  * struct dpu_plane_state: Define dpu extension of drm plane state object
  * @base:	base drm plane state object
@@ -41,6 +43,10 @@ struct dpu_plane_state {
 	u64 plane_clk;
 
 	bool needs_dirtyfb;
+
+	bool needs_rotate;
+	u32 rot_dst_iova;
+	struct dpu_plane_rot_bufs *rot_bufs;
 
 	struct dpu_hw_fmt_layout layout;
 };
