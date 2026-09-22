@@ -114,7 +114,7 @@ static const char * const wcd937x_supplies[] = {
 };
 
 static const SNDRV_CTL_TLVD_DECLARE_DB_MINMAX(ear_pa_gain, 600, -1800);
-static const DECLARE_TLV_DB_SCALE(line_gain, 0, 7, 1);
+static const DECLARE_TLV_DB_SCALE(line_gain, -3000, 150, 0);
 static const DECLARE_TLV_DB_SCALE(analog_gain, 0, 25, 1);
 
 struct wcd937x_mbhc_zdet_param {
