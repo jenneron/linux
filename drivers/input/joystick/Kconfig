@@ -438,6 +438,7 @@ config JOYSTICK_SINGLEADC_JOYPAD
 	tristate "Single-ADC / MCU SPI handheld gamepad"
 	depends on OF
 	depends on SPI
+	select CRC_ITU_T
 	help
 	  Say Y here to enable support for the handheld gamepad found on
 	  Anbernic SM4450 devices such as the RG 55G1, where the digital
