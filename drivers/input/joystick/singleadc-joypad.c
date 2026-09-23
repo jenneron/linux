@@ -1587,6 +1587,48 @@ static void sprd_spi_mcu_remove(struct spi_device *spi)
 	}
 }
 
+/*
+ * The MCU keeps the LEDs in whatever state the last frame set and stays
+ * powered through suspend, so send an off frame going down and the staged
+ * state coming back. The poller is frozen by then; the SPI client suspends
+ * before and resumes after its controller.
+ */
+static int spi_mcu_led_send(struct spi_mcu_data *smd, bool on)
+{
+	u8 sw = smd->led_switch;
+	int ret;
+
+	smd->led_switch = on ? sw : 0;
+	joypad_led_apply(smd);
+	smd->led_switch = sw;
+
+	ret = joypad_mcu_xfer(smd);
+	if (ret)
+		dev_warn(smd->dev, "LED %s frame failed: %d\n",
+			 on ? "restore" : "off", ret);
+	return ret;
+}
+
+static int spi_mcu_suspend(struct device *dev)
+{
+	struct spi_mcu_data *smd = spi_get_drvdata(to_spi_device(dev));
+
+	if (smd)
+		spi_mcu_led_send(smd, false);
+	return 0;
+}
+
+static int spi_mcu_resume(struct device *dev)
+{
+	struct spi_mcu_data *smd = spi_get_drvdata(to_spi_device(dev));
+
+	if (smd)
+		spi_mcu_led_send(smd, true);
+	return 0;
+}
+
+static DEFINE_SIMPLE_DEV_PM_OPS(spi_mcu_pm_ops, spi_mcu_suspend, spi_mcu_resume);
+
 static const struct of_device_id sprd_spi_mcu_dt_match[] = {
 	{ .compatible = "mcu,spi_joystick" },
 	{ }
@@ -1597,6 +1639,7 @@ static struct spi_driver spi_mcu_joy_driver = {
 	.driver = {
 		.name = "spi_mcu",
 		.of_match_table = sprd_spi_mcu_dt_match,
+		.pm = pm_sleep_ptr(&spi_mcu_pm_ops),
 	},
 	.probe = sprd_spi_mcu_probe,
 	.remove = sprd_spi_mcu_remove,
