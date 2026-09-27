@@ -364,6 +364,7 @@ dtb-$(CONFIG_ARCH_QCOM)	+= sm6115-mangmi-air-x-mq66b.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= sm6115-mangmi-air-y.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= sm6115p-lenovo-j606f.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= sm6125-sony-xperia-seine-pdx201.dtb
+dtb-$(CONFIG_ARCH_QCOM)	+= sm6125-retroid-pocket-duo-lite.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= sm6125-xiaomi-ginkgo.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= sm6125-xiaomi-laurel-sprout.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= sm6125-xiaomi-willow.dtb
