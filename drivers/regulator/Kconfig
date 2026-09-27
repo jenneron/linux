@@ -1886,6 +1886,14 @@ config REGULATOR_WM8994
 	  This driver provides support for the voltage regulators on the
 	  WM8994 CODEC.
 
+config REGULATOR_QCOM_PMI632_LCDB
+	tristate "Qualcomm PMI632 LCDB regulator support"
+	depends on SPMI || COMPILE_TEST
+	help
+	  This driver supports the LCDB block on the Qualcomm PMI632 PMIC,
+	  which provides the positive and negative bias supplies for LCD
+	  display panels.
+
 config REGULATOR_QCOM_LABIBB
 	tristate "Qualcomm LAB/IBB regulator support"
 	depends on SPMI || COMPILE_TEST

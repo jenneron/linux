@@ -1,0 +1,58 @@
+# SPDX-License-Identifier: GPL-2.0-only OR BSD-2-Clause
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/regulator/qcom,pmi632-lcdb.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Qualcomm PMI632 LCDB (LCD Bias) Regulators
+
+maintainers:
+  - ROCKNIX <https://github.com/ROCKNIX>
+
+description:
+  The LCDB block on the PMI632 PMIC provides the positive (LDO) and negative
+  (NCP) bias supplies for LCD panels from a shared boost converter.
+
+properties:
+  compatible:
+    const: qcom,pmi632-lcdb
+
+  ldo:
+    type: object
+    $ref: regulator.yaml#
+    unevaluatedProperties: false
+    description: Positive bias output.
+
+  ncp:
+    type: object
+    $ref: regulator.yaml#
+    unevaluatedProperties: false
+    description: Negative bias output, described by its magnitude.
+
+required:
+  - compatible
+
+additionalProperties: false
+
+examples:
+  - |
+    pmic {
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        lcdb {
+            compatible = "qcom,pmi632-lcdb";
+
+            lcdb_ldo: ldo {
+                regulator-name = "lcdb_ldo";
+                regulator-min-microvolt = <4000000>;
+                regulator-max-microvolt = <6000000>;
+            };
+
+            lcdb_ncp: ncp {
+                regulator-name = "lcdb_ncp";
+                regulator-min-microvolt = <4000000>;
+                regulator-max-microvolt = <6000000>;
+            };
+        };
+    };
