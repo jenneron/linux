@@ -419,6 +419,7 @@ enum sm6125_functions {
 	msm_mux_pll_bypassnl,
 	msm_mux_pll_bist,
 	msm_mux_qup03,
+	msm_mux_qup03_2,
 	msm_mux_pll_reset,
 	msm_mux_agera_pll,
 	msm_mux_qdss_cti,
@@ -618,6 +619,9 @@ static const char * const pll_bist_groups[] = {
 	"gpio13", "gpio32",
 };
 static const char * const qup03_groups[] = {
+	"gpio14", "gpio15",
+};
+static const char * const qup03_2_groups[] = {
 	"gpio14", "gpio15",
 };
 static const char * const pll_reset_groups[] = {
@@ -961,6 +965,7 @@ static const struct pinfunction sm6125_functions[] = {
 	MSM_PIN_FUNCTION(pll_bypassnl),
 	MSM_PIN_FUNCTION(pll_bist),
 	MSM_PIN_FUNCTION(qup03),
+	MSM_PIN_FUNCTION(qup03_2),
 	MSM_PIN_FUNCTION(pll_reset),
 	MSM_PIN_FUNCTION(agera_pll),
 	MSM_PIN_FUNCTION(qdss_cti),
@@ -1089,8 +1094,8 @@ static const struct msm_pingroup sm6125_groups[] = {
 	[11] = PINGROUP(11, EAST, qup14, atest_usb10, ddr_pxi2, _, _, _, _, _, _),
 	[12] = PINGROUP(12, EAST, qup14, jitter_bist, ddr_pxi3, _, _, _, _, _, _),
 	[13] = PINGROUP(13, EAST, qup14, pll_bypassnl, pll_bist, _, ddr_pxi3, _, _, _, _),
-	[14] = PINGROUP(14, WEST, qup03, qup03, pll_reset, agera_pll, _, qdss_cti, _, _, _),
-	[15] = PINGROUP(15, WEST, qup03, qup03, qdss_cti, _, _, _, _, _, _),
+	[14] = PINGROUP(14, WEST, qup03, qup03_2, pll_reset, agera_pll, _, qdss_cti, _, _, _),
+	[15] = PINGROUP(15, WEST, qup03, qup03_2, qdss_cti, _, _, _, _, _, _),
 	[16] = PINGROUP(16, WEST, qup04, qup04, _, wlan2_adc1, _, _, _, _, _),
 	[17] = PINGROUP(17, WEST, qup04, qup04, _, wlan2_adc0, _, _, _, _, _),
 	[18] = PINGROUP(18, EAST, wsa_clk, qup13, ter_mi2s, _, _, _, _, _, _),
