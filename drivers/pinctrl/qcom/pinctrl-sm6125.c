@@ -1208,14 +1208,14 @@ static const struct msm_pingroup sm6125_groups[] = {
 	[130] = PINGROUP(130, SOUTH, phase_flag, _, _, _, _, _, _, _, _),
 	[131] = PINGROUP(131, SOUTH, phase_flag, _, _, _, _, _, _, _, _),
 	[132] = PINGROUP(132, SOUTH, _, _, _, _, _, _, _, _, _),
-	[133] = UFS_RESET(ufs_reset, 0x190000),
-	[134] = SDC_QDSD_PINGROUP(sdc1_rclk, WEST, 0x18d000, 15, 0),
-	[135] = SDC_QDSD_PINGROUP(sdc1_clk, WEST, 0x18d000, 13, 6),
-	[136] = SDC_QDSD_PINGROUP(sdc1_cmd, WEST, 0x18d000, 11, 3),
-	[137] = SDC_QDSD_PINGROUP(sdc1_data, WEST, 0x18d000, 9, 0),
-	[138] = SDC_QDSD_PINGROUP(sdc2_clk, SOUTH, 0x58b000, 14, 6),
-	[139] = SDC_QDSD_PINGROUP(sdc2_cmd, SOUTH, 0x58b000, 11, 3),
-	[140] = SDC_QDSD_PINGROUP(sdc2_data, SOUTH, 0x58b000, 9, 0),
+	[133] = UFS_RESET(ufs_reset, 0x90000),
+	[134] = SDC_QDSD_PINGROUP(sdc1_rclk, WEST, 0x8d000, 15, 0),
+	[135] = SDC_QDSD_PINGROUP(sdc1_clk, WEST, 0x8d000, 13, 6),
+	[136] = SDC_QDSD_PINGROUP(sdc1_cmd, WEST, 0x8d000, 11, 3),
+	[137] = SDC_QDSD_PINGROUP(sdc1_data, WEST, 0x8d000, 9, 0),
+	[138] = SDC_QDSD_PINGROUP(sdc2_clk, SOUTH, 0x8b000, 14, 6),
+	[139] = SDC_QDSD_PINGROUP(sdc2_cmd, SOUTH, 0x8b000, 11, 3),
+	[140] = SDC_QDSD_PINGROUP(sdc2_data, SOUTH, 0x8b000, 9, 0),
 };
 
 static const struct msm_gpio_wakeirq_map sm6125_mpm_map[] = {
