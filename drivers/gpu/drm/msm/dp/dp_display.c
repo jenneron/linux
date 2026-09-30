@@ -111,6 +111,11 @@ static const struct msm_dp_desc msm_dp_desc_sa8775p[] = {
 	{}
 };
 
+static const struct msm_dp_desc msm_dp_desc_sm6125[] = {
+	{ .io_start = 0x05e90000, .id = MSM_DP_CONTROLLER_0 },
+	{}
+};
+
 static const struct msm_dp_desc msm_dp_desc_sdm845[] = {
 	{ .io_start = 0x0ae90000, .id = MSM_DP_CONTROLLER_0 },
 	{}
@@ -170,6 +175,7 @@ static const struct of_device_id msm_dp_dt_match[] = {
 	{ .compatible = "qcom,sc8280xp-dp", .data = &msm_dp_desc_sc8280xp },
 	{ .compatible = "qcom,sc8280xp-edp", .data = &msm_dp_desc_sc8280xp },
 	{ .compatible = "qcom,sdm845-dp", .data = &msm_dp_desc_sdm845 },
+	{ .compatible = "qcom,sm6125-dp", .data = &msm_dp_desc_sm6125 },
 	{ .compatible = "qcom,sm8350-dp", .data = &msm_dp_desc_sc7180 },
 	{ .compatible = "qcom,sm8650-dp", .data = &msm_dp_desc_sm8650 },
 	{ .compatible = "qcom,x1e80100-dp", .data = &msm_dp_desc_x1e80100 },
@@ -617,6 +623,17 @@ static int msm_dp_display_set_mode(struct msm_dp *msm_dp_display,
 	return 0;
 }
 
+/*
+ * A downstream bridge that supplies its own modes is a hardwired sink
+ * without hotplug: the link is brought up and down from the bridge
+ * enable and disable paths, like eDP.
+ */
+static bool msm_dp_display_fixed_sink(struct msm_dp_display_private *dp)
+{
+	return dp->msm_dp_display.next_bridge &&
+	       (dp->msm_dp_display.next_bridge->ops & DRM_BRIDGE_OP_MODES);
+}
+
 static int msm_dp_display_prepare_link(struct msm_dp_display_private *dp)
 {
 	struct msm_dp *msm_dp_display = &dp->msm_dp_display;
@@ -625,7 +642,7 @@ static int msm_dp_display_prepare_link(struct msm_dp_display_private *dp)
 
 	drm_dbg_dp(dp->drm_dev, "sink_count=%d\n", dp->link->sink_count);
 
-	if (msm_dp_display->is_edp)
+	if (msm_dp_display->is_edp || msm_dp_display_fixed_sink(dp))
 		msm_dp_hpd_plug_handle(dp);
 
 	rc = pm_runtime_resume_and_get(&msm_dp_display->pdev->dev);
@@ -794,7 +811,8 @@ enum drm_mode_status msm_dp_display_mode_valid(struct msm_dp *dp,
 	mode_rate_khz = link_pclk_khz * mode_bpp;
 	supported_rate_khz = link_info->num_lanes * link_info->rate * 8;
 
-	if (mode_rate_khz > supported_rate_khz)
+	/* A fixed sink is validated before its capabilities are read */
+	if (supported_rate_khz && mode_rate_khz > supported_rate_khz)
 		return MODE_BAD;
 
 	return MODE_OK;
@@ -1493,7 +1511,7 @@ void msm_dp_display_atomic_post_disable(struct msm_dp *dp)
 
 	msm_dp_display = container_of(dp, struct msm_dp_display_private, msm_dp_display);
 
-	if (dp->is_edp)
+	if (dp->is_edp || msm_dp_display_fixed_sink(msm_dp_display))
 		msm_dp_hpd_unplug_handle(msm_dp_display);
 
 	msm_dp_display_audio_notify_disable(msm_dp_display);
@@ -1546,6 +1564,10 @@ void msm_dp_bridge_hpd_notify(struct drm_bridge *bridge,
 	struct msm_dp *msm_dp_display = msm_dp_bridge->msm_dp_display;
 	struct msm_dp_display_private *dp = container_of(msm_dp_display, struct msm_dp_display_private, msm_dp_display);
 	u32 hpd_link_status = 0;
+
+	/* A fixed sink is plugged from the bridge enable path instead */
+	if (msm_dp_display_fixed_sink(dp))
+		return;
 
 	if (pm_runtime_resume_and_get(&msm_dp_display->pdev->dev)) {
 		DRM_ERROR("failed to pm_runtime_resume\n");

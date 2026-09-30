@@ -369,6 +369,10 @@ struct drm_connector *msm_dp_drm_connector_init(struct msm_dp *msm_dp_display,
 	if (IS_ERR(connector))
 		return connector;
 
+	if (msm_dp_display->next_bridge &&
+	    (msm_dp_display->next_bridge->ops & DRM_BRIDGE_OP_MODES))
+		connector->force = DRM_FORCE_OFF;
+
 	if (!msm_dp_display->is_edp)
 		drm_connector_attach_dp_subconnector_property(connector);
 
