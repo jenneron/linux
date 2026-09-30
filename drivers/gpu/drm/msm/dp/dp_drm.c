@@ -111,6 +111,7 @@ static const struct drm_bridge_funcs msm_dp_bridge_ops = {
 	.hpd_notify   = msm_dp_bridge_hpd_notify,
 	.debugfs_init = msm_dp_bridge_debugfs_init,
 
+	.dp_audio_startup = msm_dp_audio_startup,
 	.dp_audio_prepare = msm_dp_audio_prepare,
 	.dp_audio_shutdown = msm_dp_audio_shutdown,
 };

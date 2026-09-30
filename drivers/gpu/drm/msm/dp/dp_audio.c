@@ -6,6 +6,7 @@
 
 #define pr_fmt(fmt)	"[drm-dp] %s: " fmt, __func__
 
+#include <linux/of.h>
 #include <linux/platform_device.h>
 
 #include <drm/display/drm_dp_helper.h>
@@ -263,6 +264,28 @@ static struct msm_dp_audio_private *msm_dp_audio_get_data(struct msm_dp *msm_dp_
 	}
 
 	return container_of(msm_dp_audio, struct msm_dp_audio_private, msm_dp_audio);
+}
+
+/*
+ * On SM8250, refuse to open a DP audio stream while the link is down. Without
+ * this the open succeeds and the stream is started on the DSP's DP port anyway,
+ * and SM8250's DSP (q6afe) does not answer that first port start at all: every
+ * open made with nothing plugged in blocks for q6afe's 3 s timeout before it
+ * fails. The downstream DP audio codec makes the same check in its startup.
+ *
+ * SM8250 only: on the AudioReach SoCs the unplugged open is harmless, and
+ * failing it there is what d858770e86e7 removed from prepare.
+ */
+int msm_dp_audio_startup(struct drm_bridge *bridge,
+			 struct drm_connector *connector)
+{
+	struct msm_dp *msm_dp_display = to_dp_bridge(bridge)->msm_dp_display;
+
+	if (!of_device_is_compatible(msm_dp_display->pdev->dev.of_node,
+				     "qcom,sm8250-dp"))
+		return 0;
+
+	return msm_dp_display->power_on ? 0 : -ENODEV;
 }
 
 int msm_dp_audio_prepare(struct drm_bridge *bridge,

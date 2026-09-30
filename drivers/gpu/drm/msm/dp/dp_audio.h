@@ -45,6 +45,8 @@ struct msm_dp_audio *msm_dp_audio_get(struct platform_device *pdev,
  */
 void msm_dp_audio_put(struct msm_dp_audio *msm_dp_audio);
 
+int msm_dp_audio_startup(struct drm_bridge *bridge,
+			 struct drm_connector *connector);
 int msm_dp_audio_prepare(struct drm_bridge *bridge,
 			 struct drm_connector *connector,
 			 struct hdmi_codec_daifmt *daifmt,
