@@ -503,6 +503,15 @@ config DRM_WAVESHARE_BRIDGE
 	  Driver for waveshare DSI to DPI bridge board.
 	  Please say Y if you have such hardware
 
+config DRM_WL818S
+	tristate "WL818S DP-to-MIPI bridge"
+	depends on OF
+	select DRM_KMS_HELPER
+	select DRM_PANEL_BRIDGE
+	help
+	  Driver for the WL818S DP-to-MIPI bridge MCU, hardwired to the bottom
+	  panel of the Retroid Pocket Duo Lite.
+
 source "drivers/gpu/drm/bridge/analogix/Kconfig"
 
 source "drivers/gpu/drm/bridge/adv7511/Kconfig"
