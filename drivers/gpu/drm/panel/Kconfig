@@ -982,6 +982,14 @@ config DRM_PANEL_RENESAS_R69328
 	  This panel controller can be found in LG Optimus 4X P895 smartphone
 	  in combination with LCD panel.
 
+config DRM_PANEL_RETROID_DUOLITE_BOTTOM
+	tristate "Retroid Pocket Duo Lite bottom panel"
+	depends on OF
+	depends on BACKLIGHT_CLASS_DEVICE
+	help
+	  Say Y here to enable power sequencing for the bottom panel of the
+	  Retroid Pocket Duo Lite, which sits behind a WL818S DP-to-MIPI bridge.
+
 config DRM_PANEL_RONBO_RB070D30
 	tristate "Ronbo Electronics RB070D30 panel"
 	depends on OF
