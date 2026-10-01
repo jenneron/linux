@@ -365,6 +365,13 @@ config BACKLIGHT_SAHARA
 	  If you have a Tabletkiosk Sahara Touch-iT, say y to enable the
 	  backlight driver.
 
+config BACKLIGHT_WL818S
+	tristate "WL818S bridge MCU backlight"
+	depends on SERIAL_DEV_BUS
+	help
+	  Say Y to enable the backlight of the Retroid Pocket Duo Lite bottom
+	  panel, set over UART through the WL818S bridge MCU.
+
 config BACKLIGHT_WM831X
 	tristate "WM831x PMIC Backlight Driver"
 	depends on MFD_WM831X
