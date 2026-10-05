@@ -361,6 +361,7 @@ dtb-$(CONFIG_ARCH_QCOM)	+= sm6115-fxtec-pro1x.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= sm6115-mangmi-air-x-mq65.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= sm6115-mangmi-air-x-mq66.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= sm6115-mangmi-air-x-mq66b.dtb
+dtb-$(CONFIG_ARCH_QCOM)	+= sm6115-mangmi-air-y.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= sm6115p-lenovo-j606f.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= sm6125-sony-xperia-seine-pdx201.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= sm6125-xiaomi-ginkgo.dtb
