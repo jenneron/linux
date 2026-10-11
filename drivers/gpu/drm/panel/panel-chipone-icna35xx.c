@@ -34,6 +34,9 @@ struct panel_info {
 
 	struct gpio_desc *reset_gpio;
 	struct regulator_bulk_data *supplies;
+	bool enabled;
+
+	u16 frame_len_120;
 };
 
 struct panel_desc {
@@ -50,6 +53,8 @@ struct panel_desc {
 	int (*init_sequence)(struct panel_info *pinfo);
 
 	struct drm_dsc_config dsc;
+
+	u16 frame_len_120;
 };
 
 static const struct regulator_bulk_data panel_supplies[] = {
@@ -100,6 +105,20 @@ static int icna3512_init_sequence(struct panel_info *pinfo)
 	return dsi_ctx.accum_err;
 }
 
+static void icna3520_set_frame_len(struct mipi_dsi_multi_context *dsi_ctx,
+				   struct panel_info *pinfo)
+{
+	u8 payload_120[] = {
+		0xB3,
+		0x00, 0xD8, 0x00, 0x1C,
+		pinfo->frame_len_120 >> 8, pinfo->frame_len_120 & 0xff,
+	};
+
+	mipi_dsi_generic_write_seq_multi(dsi_ctx, 0x48, 0x00);
+	mipi_dsi_generic_write_seq_multi(dsi_ctx, 0x9F, 0x00);
+	mipi_dsi_generic_write_multi(dsi_ctx, payload_120, sizeof(payload_120));
+}
+
 static int icna3520_init_sequence(struct panel_info *pinfo)
 {
 	struct mipi_dsi_multi_context dsi_ctx = { .dsi = pinfo->dsi };
@@ -118,10 +137,7 @@ static int icna3520_init_sequence(struct panel_info *pinfo)
 	mipi_dsi_msleep(&dsi_ctx, 120);
 
 	/* 120 hz */
-	mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0x48, 0x00);
-	mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0x9F, 0x00);
-	mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0xB3,
-		0x00, 0xD8, 0x00, 0x1C, 0x00, 0x4C);
+	icna3520_set_frame_len(&dsi_ctx, pinfo);
 
 	mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0x9F, 0x01);
 	mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0xB2, 0x00);
@@ -206,6 +222,7 @@ static struct panel_desc thor_top_desc = {
 	.mode_flags =  MIPI_DSI_MODE_NO_EOT_PACKET | MIPI_DSI_CLOCK_NON_CONTINUOUS |
 			MIPI_DSI_MODE_LPM,
 	.init_sequence = icna3520_init_sequence,
+	.frame_len_120 = 0x4C,
 	.dsc = {
 		.dsc_version_major = 0x1,
 		.dsc_version_minor = 0x1,
@@ -248,6 +265,8 @@ static int icna35xx_prepare(struct drm_panel *panel)
 		return ret;
 	}
 
+	pinfo->enabled = true;
+
 	return 0;
 }
 
@@ -256,6 +275,7 @@ static int icna35xx_disable(struct drm_panel *panel)
 	struct panel_info *pinfo = to_panel_info(panel);
 	struct mipi_dsi_multi_context dsi_ctx = { .dsi = pinfo->dsi };
 
+	pinfo->enabled = false;
 	pinfo->dsi->mode_flags &= ~MIPI_DSI_MODE_LPM;
 
 	mipi_dsi_dcs_set_display_off_multi(&dsi_ctx);
@@ -347,6 +367,56 @@ static struct backlight_device *icna35xx_create_backlight(struct mipi_dsi_device
 					      &icna35xx_bl_ops, &props);
 }
 
+static ssize_t frame_len_120_show(struct device *dev,
+				  struct device_attribute *attr, char *buf)
+{
+	struct panel_info *pinfo = dev_get_drvdata(dev);
+
+	return sysfs_emit(buf, "%u\n", pinfo->frame_len_120);
+}
+
+static ssize_t frame_len_120_store(struct device *dev,
+				   struct device_attribute *attr,
+				   const char *buf, size_t count)
+{
+	struct panel_info *pinfo = dev_get_drvdata(dev);
+	struct mipi_dsi_multi_context dsi_ctx = { .dsi = pinfo->dsi };
+	u16 val;
+	int ret;
+
+	ret = kstrtou16(buf, 0, &val);
+	if (ret)
+		return ret;
+
+	if (val < 0x10 || val > 0x80)
+		return -EINVAL;
+
+	pinfo->frame_len_120 = val;
+
+	if (!pinfo->enabled)
+		return count;
+
+	pinfo->dsi->mode_flags &= ~MIPI_DSI_MODE_LPM;
+	icna3520_set_frame_len(&dsi_ctx, pinfo);
+	mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0x9F, 0x0D);
+	pinfo->dsi->mode_flags |= MIPI_DSI_MODE_LPM;
+
+	if (dsi_ctx.accum_err)
+		return dsi_ctx.accum_err;
+
+	return count;
+}
+static DEVICE_ATTR_RW(frame_len_120);
+
+static struct attribute *icna3520_attrs[] = {
+	&dev_attr_frame_len_120.attr,
+	NULL
+};
+
+static const struct attribute_group icna3520_group = {
+	.attrs = icna3520_attrs,
+};
+
 static int icna35xx_probe(struct mipi_dsi_device *dsi)
 {
 	struct device *dev = &dsi->dev;
@@ -374,6 +444,14 @@ static int icna35xx_probe(struct mipi_dsi_device *dsi)
 
 	pinfo->dsi = dsi;
 	mipi_dsi_set_drvdata(dsi, pinfo);
+
+	if (pinfo->desc->frame_len_120) {
+		pinfo->frame_len_120 = pinfo->desc->frame_len_120;
+
+		ret = devm_device_add_group(dev, &icna3520_group);
+		if (ret)
+			return ret;
+	}
 
 	ret = drm_of_get_panel_orientation(dev->of_node, &pinfo->orientation);
 	if (ret < 0) {
