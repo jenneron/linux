@@ -150,6 +150,8 @@ struct rpmh_vreg_hw_data {
  *				handle in RPMh write requests.
  * @addr:			Base address of the regulator resource within
  *				an RPMh accelerator
+ * @pbs_addr:			Address of the PBS trigger resource that enable
+ *				votes are sent to instead of the VRM resource
  * @rdesc:			Regulator descriptor
  * @hw_data:			PMIC regulator configuration data for this RPMh
  *				regulator
@@ -169,6 +171,7 @@ struct rpmh_vreg_hw_data {
 struct rpmh_vreg {
 	struct device			*dev;
 	u32				addr;
+	u32				pbs_addr;
 	struct regulator_desc		rdesc;
 	const struct rpmh_vreg_hw_data	*hw_data;
 	bool				always_wait_for_ack;
@@ -191,6 +194,8 @@ struct rpmh_vreg {
  * @hw_data:			Configuration data for this PMIC regulator type
  * @resource_name:		Explicit RPMh resource name, used instead of one
  *				built from the PMIC id and regulator index
+ * @pbs_resource_name:		PBS trigger resource that switches this regulator
+ *				on and off, if the PMIC sequences it through PBS
  */
 struct rpmh_vreg_init_data {
 	const char			*name;
@@ -199,6 +204,7 @@ struct rpmh_vreg_init_data {
 	const char			*supply_name;
 	const struct rpmh_vreg_hw_data	*hw_data;
 	const char			*resource_name;
+	const char			*pbs_resource_name;
 };
 
 /**
@@ -311,6 +317,9 @@ static int rpmh_regulator_set_enable_state(struct regulator_dev *rdev,
 		.data = enable,
 	};
 	int ret;
+
+	if (vreg->pbs_addr)
+		cmd.addr = vreg->pbs_addr + RPMH_REGULATOR_REG_PBS_ENABLE;
 
 	if (vreg->enabled == -EINVAL &&
 	    vreg->voltage_selector != -ENOTRECOVERABLE) {
@@ -545,6 +554,15 @@ static int rpmh_regulator_init_vreg(struct rpmh_vreg *vreg, struct device *dev,
 		dev_err(dev, "%pOFn: could not find RPMh address for resource %s\n",
 			node, rpmh_resource_name);
 		return -ENODEV;
+	}
+
+	if (rpmh_data->pbs_resource_name) {
+		vreg->pbs_addr = cmd_db_read_addr(rpmh_data->pbs_resource_name);
+		if (!vreg->pbs_addr) {
+			dev_err(dev, "%pOFn: could not find RPMh address for resource %s\n",
+				node, rpmh_data->pbs_resource_name);
+			return -ENODEV;
+		}
 	}
 
 	vreg->rdesc.name = rpmh_data->name;
@@ -1663,11 +1681,13 @@ static const struct rpmh_vreg_init_data pm6450_vreg_data[] = {
 	RPMH_VREG("ldo21",  LDO,  21, &pmic5_pldo_lv,   NULL),
 	RPMH_VREG("ldo22",  LDO,  22, &pmic5_pldo_lv,   NULL),
 	RPMH_VREG("ldo23",  LDO,  23, &pmic5_pldo_lv,   NULL),
-	RPMH_VREG("ldo24",  LDO,  24, &pmic5_pldo,      NULL),
+	{ .name = "ldo24", .vreg_hw_type = LDO, .index = 24, .hw_data = &pmic5_pldo,
+	  .pbs_resource_name = "vrm.sd" },
 	RPMH_VREG("ldo25",  LDO,  25, &pmic5_pldo,      NULL),
 	RPMH_VREG("ldo26",  LDO,  26, &pmic5_pldo,      NULL),
 	RPMH_VREG("ldo27",  LDO,  27, &pmic5_pldo,      NULL),
-	RPMH_VREG("ldo28",  LDO,  28, &pmic5_pldo,      NULL),
+	{ .name = "ldo28", .vreg_hw_type = LDO, .index = 28, .hw_data = &pmic5_pldo,
+	  .pbs_resource_name = "vrm.px2" },
 	/* PBS trigger resources sequencing the SD card rails */
 	{ .name = "pbs_sd",  .resource_name = "vrm.sd",  .hw_data = &pmic5_pbs },
 	{ .name = "pbs_px2", .resource_name = "vrm.px2", .hw_data = &pmic5_pbs },
