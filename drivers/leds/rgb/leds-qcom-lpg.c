@@ -1238,10 +1238,8 @@ static int lpg_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 {
 	struct lpg *lpg = lpg_pwm_from_chip(chip);
 	struct lpg_channel *chan = &lpg->channels[pwm->hwpwm];
+	bool inversed = state->polarity == PWM_POLARITY_INVERSED;
 	int ret = 0;
-
-	if (state->polarity != PWM_POLARITY_NORMAL)
-		return -EINVAL;
 
 	mutex_lock(&lpg->lock);
 
@@ -1250,9 +1248,20 @@ static int lpg_pwm_apply(struct pwm_chip *chip, struct pwm_device *pwm,
 		if (ret < 0)
 			goto out_unlock;
 
-		lpg_calc_duty(chan, state->duty_cycle);
+		if (inversed)
+			lpg_calc_duty(chan, state->period - state->duty_cycle);
+		else
+			lpg_calc_duty(chan, state->duty_cycle);
+	} else if (inversed) {
+		if (state->period) {
+			ret = lpg_calc_freq(chan, state->period);
+			if (ret < 0)
+				goto out_unlock;
+		}
+
+		lpg_calc_duty(chan, chan->period);
 	}
-	chan->enabled = state->enabled;
+	chan->enabled = state->enabled || inversed;
 
 	lpg_apply(chan);
 
