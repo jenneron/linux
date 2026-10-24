@@ -215,6 +215,14 @@ static int qcom_icc_rpm_set(struct qcom_icc_node *qn, u64 *bw, bool ignore_enxio
 	for (rpm_ctx = 0; rpm_ctx < QCOM_SMD_RPM_STATE_NUM; rpm_ctx++) {
 		bw_bps = icc_units_to_bps(bw[rpm_ctx]);
 
+		/*
+		 * The RPM keeps the last request per resource, so resending an unchanged
+		 * value only costs a blocking SMD round trip. Every cpufreq transition votes
+		 * its OPP's peak through here, and that rarely moves these sums.
+		 */
+		if (qn->rpm_bw_sent[rpm_ctx] && qn->rpm_bw[rpm_ctx] == bw_bps)
+			continue;
+
 		if (qn->mas_rpm_id != -1) {
 			ret = qcom_icc_rpm_smd_send(rpm_ctx,
 						    RPM_BUS_MASTER_REQ,
@@ -240,6 +248,9 @@ static int qcom_icc_rpm_set(struct qcom_icc_node *qn, u64 *bw, bool ignore_enxio
 					return ret;
 			}
 		}
+
+		qn->rpm_bw[rpm_ctx] = bw_bps;
+		qn->rpm_bw_sent[rpm_ctx] = true;
 	}
 
 	return 0;
