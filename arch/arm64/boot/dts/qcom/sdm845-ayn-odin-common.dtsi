@@ -35,7 +35,6 @@
 
 	gpio-keys {
 		compatible = "gpio-keys";
-		autorepeat;
 
 		pinctrl-names = "default";
 		pinctrl-0 = <&volume_up_gpio>;
