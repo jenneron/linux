@@ -2253,9 +2253,11 @@ static void ath10k_peer_assoc_h_crypto(struct ath10k *ar,
 		arg->peer_flags |= ar->wmi.peer_flags->need_gtk_2_way;
 	}
 
+	/* WMI-TLV firmware takes PMF peers whatever firmware-N.bin says */
 	if (sta->mfp &&
-	    test_bit(ATH10K_FW_FEATURE_MFP_SUPPORT,
-		     ar->running_fw->fw_file.fw_features)) {
+	    (ar->running_fw->fw_file.wmi_op_version == ATH10K_FW_WMI_OP_VERSION_TLV ||
+	     test_bit(ATH10K_FW_FEATURE_MFP_SUPPORT,
+		      ar->running_fw->fw_file.fw_features))) {
 		arg->peer_flags |= ar->wmi.peer_flags->pmf;
 	}
 }
