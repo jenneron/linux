@@ -480,6 +480,7 @@ config TOUCHSCREEN_HYCON_HY46XX
 config TOUCHSCREEN_HYNITRON_CSTXXX
 	tristate "Hynitron touchscreen support"
 	depends on I2C
+	depends on DRM || !DRM
 	help
 	  Say Y here if you have a touchscreen using a Hynitron
 	  touchscreen controller.
