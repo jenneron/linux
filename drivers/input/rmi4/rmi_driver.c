@@ -141,7 +141,8 @@ static int rmi_process_interrupt_requests(struct rmi_device *rmi_dev)
 				data->f01_container->fd.data_base_addr + 1,
 				data->irq_status, data->num_of_irq_regs);
 		if (error < 0) {
-			// dev_err(dev, "Failed to read irqs, code=%d\n", error);
+			/* Some touch controllers keep failing this read; stay quiet. */
+			dev_dbg(dev, "Failed to read irqs, code=%d\n", error);
 			return error;
 		}
 	}
