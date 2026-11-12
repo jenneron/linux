@@ -4291,13 +4291,16 @@ static bool tcpm_send_queued_message(struct tcpm_port *port)
 
 		switch (queued_message) {
 		case PD_MSG_CTRL_WAIT:
-			tcpm_pd_send_control(port, PD_CTRL_WAIT, TCPC_TX_SOP);
+			if (tcpm_pd_send_control(port, PD_CTRL_WAIT, TCPC_TX_SOP) == -EAGAIN)
+				port->queued_message = queued_message;
 			break;
 		case PD_MSG_CTRL_REJECT:
-			tcpm_pd_send_control(port, PD_CTRL_REJECT, TCPC_TX_SOP);
+			if (tcpm_pd_send_control(port, PD_CTRL_REJECT, TCPC_TX_SOP) == -EAGAIN)
+				port->queued_message = queued_message;
 			break;
 		case PD_MSG_CTRL_NOT_SUPP:
-			tcpm_pd_send_control(port, PD_CTRL_NOT_SUPP, TCPC_TX_SOP);
+			if (tcpm_pd_send_control(port, PD_CTRL_NOT_SUPP, TCPC_TX_SOP) == -EAGAIN)
+				port->queued_message = queued_message;
 			break;
 		case PD_MSG_DATA_SINK_CAP:
 			ret = tcpm_pd_send_sink_caps(port);
