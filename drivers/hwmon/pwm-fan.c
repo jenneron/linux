@@ -561,17 +561,17 @@ static int pwm_fan_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	/* use maximum cooling level if provided */
-	if (ctx->pwm_fan_cooling_levels)
-		initial_pwm = ctx->pwm_fan_cooling_levels[ctx->pwm_fan_max_state];
-	else
-		initial_pwm = MAX_PWM;
+	/*
+	 * ROCKNIX: start the fan at a fixed, quiet duty cycle instead of the
+	 * maximum cooling level, and let thermal management take over.
+	 */
+	initial_pwm = 70;
 
 	/*
-	 * Set duty cycle to maximum allowed and enable PWM output as well as
-	 * the regulator. In case of error nothing is changed
+	 * Set the boot duty cycle and enable PWM output as well as the
+	 * regulator. In case of error nothing is changed
 	 */
-	ret = set_pwm(ctx, 70);
+	ret = set_pwm(ctx, initial_pwm);
 	if (ret) {
 		dev_err(dev, "Failed to configure PWM: %d\n", ret);
 		return ret;
