@@ -446,6 +446,7 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	struct pwm_bl_data *pb;
 	struct pwm_state state;
 	unsigned int i;
+	u32 scale;
 	int ret;
 
 	if (!data) {
@@ -538,6 +539,10 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 		for (i = 0; i <= data->max_brightness; i++)
 			if (data->levels[i] > pb->scale)
 				pb->scale = data->levels[i];
+
+		if (!device_property_read_u32(&pdev->dev, "brightness-scale", &scale) &&
+		    scale > pb->scale)
+			pb->scale = scale;
 
 		if (pwm_backlight_is_linear(data))
 			props.scale = BACKLIGHT_SCALE_LINEAR;
