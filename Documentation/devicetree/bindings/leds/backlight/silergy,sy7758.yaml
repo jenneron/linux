@@ -31,7 +31,6 @@ properties:
 required:
   - compatible
   - reg
-  - enable-gpios
 
 unevaluatedProperties: false
 

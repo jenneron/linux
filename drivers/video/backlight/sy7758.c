@@ -185,7 +185,7 @@ static int sy7758_probe(struct i2c_client *client)
 	fsleep(100);
 
 	/* Get enable GPIO and set to high */
-	sydev->gpio = devm_gpiod_get(dev, "enable", GPIOD_OUT_HIGH);
+	sydev->gpio = devm_gpiod_get_optional(dev, "enable", GPIOD_OUT_HIGH);
 	if (IS_ERR(sydev->gpio))
 		return dev_err_probe(dev, PTR_ERR(sydev->gpio),
 				     "failed to get enable GPIO\n");
