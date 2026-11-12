@@ -22,6 +22,8 @@ properties:
       - enum:
           - ayntec,thor-panel-bottom
           - ayntec,thorlite-panel-bottom
+          - retroid,pocket-classic-g1392-panel
+          - retroid,pocket-classic-panel
           - retroidpocket,rp5-panel
           - retroidpocket,rpmini-panel
           - retroidpocket,rpminiv2-panel
@@ -46,8 +48,17 @@ required:
   - vdd-supply
   - vddio-supply
   - vdd1v2-supply
-  - avdd-supply
   - reset-gpios
+
+if:
+  not:
+    properties:
+      compatible:
+        contains:
+          const: retroid,pocket-classic-g1392-panel
+then:
+  required:
+    - avdd-supply
 
 additionalProperties: false
 
