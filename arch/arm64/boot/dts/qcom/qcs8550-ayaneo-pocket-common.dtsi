@@ -989,7 +989,7 @@
 	status = "okay";
 
 	/* AYANEO Controller serial interface */
-	uart11: uart@88c000 {
+	uart11: serial@88c000 {
 		compatible = "qcom,geni-uart";
 		reg = <0 0x0088c000 0 0x4000>;
 		clock-names = "se";
