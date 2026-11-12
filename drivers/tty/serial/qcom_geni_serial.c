@@ -1039,8 +1039,26 @@ static void qcom_geni_serial_handle_rx_dma(struct uart_port *uport, bool drop)
 	struct qcom_geni_serial_port *port = to_dev_port(uport);
 	u32 rx_in;
 
-	if (!qcom_geni_serial_secondary_active(uport))
+	if (!qcom_geni_serial_secondary_active(uport)) {
+		if (!port->rx_dma_addr)
+			return;
+
+		/*
+		 * The read command terminated on its own: take whatever it
+		 * delivered and start a new one, or RX stalls for good.
+		 */
+		dma_sync_single_for_cpu(uport->dev->parent, port->rx_dma_addr,
+					DMA_RX_BUF_SIZE, DMA_FROM_DEVICE);
+
+		rx_in = readl(uport->membase + SE_DMA_RX_LEN_IN);
+		if (rx_in && !drop) {
+			trace_geni_serial_rx_data(uport->dev, port->rx_buf, rx_in);
+			handle_rx_uart(uport, rx_in);
+		}
+
+		qcom_geni_serial_start_rx_dma(uport);
 		return;
+	}
 
 	if (!port->rx_dma_addr)
 		return;
