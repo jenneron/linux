@@ -538,6 +538,15 @@ static const struct qcom_pdm_domain_data *sdm845_domains[] = {
 	NULL,
 };
 
+static const struct qcom_pdm_domain_data *sm4450_domains[] = {
+	&adsp_audio_pd,
+	&adsp_root_pd,
+	&adsp_charger_pd,
+	&adsp_sensor_pd,
+	&mpss_root_pd_gps,
+	NULL,
+};
+
 static const struct qcom_pdm_domain_data *sm6115_domains[] = {
 	&adsp_audio_pd,
 	&adsp_root_pd,
@@ -651,6 +660,7 @@ static const struct of_device_id qcom_pdm_domains[] __maybe_unused = {
 	{ .compatible = "qcom,sdm670", .data = sdm670_domains, },
 	{ .compatible = "qcom,sdm845", .data = sdm845_domains, },
 	{ .compatible = "qcom,sm4250", .data = sm6115_domains, },
+	{ .compatible = "qcom,sm4450", .data = sm4450_domains, },
 	{ .compatible = "qcom,sm6115", .data = sm6115_domains, },
 	{ .compatible = "qcom,sm6350", .data = sm6350_domains, },
 	{ .compatible = "qcom,sm7150", .data = sm7150_domains, },
