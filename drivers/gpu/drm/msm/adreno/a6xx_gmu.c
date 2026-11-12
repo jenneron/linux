@@ -78,11 +78,16 @@ static irqreturn_t a6xx_hfi_irq(int irq, void *data)
 
 bool a6xx_gmu_sptprac_is_on(struct a6xx_gmu *gmu)
 {
+	struct a6xx_gpu *a6xx_gpu = container_of(gmu, struct a6xx_gpu, gmu);
 	u32 val;
 
 	/* This can be called from gpu state code so make sure GMU is valid */
 	if (!gmu->initialized)
 		return false;
+
+	/* Only A630 and the A615 family have SPTPRAC */
+	if (!adreno_is_a630(&a6xx_gpu->base) && !adreno_is_a615_family(&a6xx_gpu->base))
+		return true;
 
 	val = gmu_read(gmu, REG_A6XX_GMU_SPTPRAC_PWR_CLK_STATUS);
 
