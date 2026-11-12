@@ -1060,10 +1060,6 @@ static struct clk_rcg2 gcc_camss_top_ahb_clk_src = {
 };
 
 static const struct freq_tbl ftbl_gcc_gp1_clk_src[] = {
-	F(25000000, P_GPLL0_OUT_AUX2, 12, 0, 0),
-	F(50000000, P_GPLL0_OUT_AUX2, 6, 0, 0),
-	F(100000000, P_GPLL0_OUT_AUX2, 3, 0, 0),
-	F(200000000, P_GPLL0_OUT_AUX2, 1.5, 0, 0),
 	{ }
 };
 
@@ -1077,7 +1073,7 @@ static struct clk_rcg2 gcc_gp1_clk_src = {
 		.name = "gcc_gp1_clk_src",
 		.parent_data = gcc_parents_2,
 		.num_parents = ARRAY_SIZE(gcc_parents_2),
-		.ops = &clk_rcg2_ops,
+		.ops = &clk_rcg2_gp_ops,
 	},
 };
 
@@ -1091,7 +1087,7 @@ static struct clk_rcg2 gcc_gp2_clk_src = {
 		.name = "gcc_gp2_clk_src",
 		.parent_data = gcc_parents_2,
 		.num_parents = ARRAY_SIZE(gcc_parents_2),
-		.ops = &clk_rcg2_ops,
+		.ops = &clk_rcg2_gp_ops,
 	},
 };
 
@@ -1105,7 +1101,7 @@ static struct clk_rcg2 gcc_gp3_clk_src = {
 		.name = "gcc_gp3_clk_src",
 		.parent_data = gcc_parents_2,
 		.num_parents = ARRAY_SIZE(gcc_parents_2),
-		.ops = &clk_rcg2_ops,
+		.ops = &clk_rcg2_gp_ops,
 	},
 };
 
