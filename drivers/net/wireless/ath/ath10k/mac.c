@@ -7686,6 +7686,19 @@ static int ath10k_sta_state(struct ieee80211_hw *hw,
 
 		spin_unlock_bh(&ar->data_lock);
 
+		if (arvif->start_pending && !sta->tdls) {
+			arvif->start_pending = false;
+			ret = ath10k_vdev_start(arvif, &arvif->pending_chandef);
+			if (ret) {
+				ath10k_warn(ar, "failed to start vdev %i after peer create: %d\n",
+					    arvif->vdev_id, ret);
+				ath10k_peer_delete(ar, arvif->vdev_id, sta->addr);
+				ath10k_mac_dec_num_stations(arvif, sta);
+				kfree(arsta->tx_stats);
+				goto exit;
+			}
+		}
+
 		if (!sta->tdls)
 			goto exit;
 
@@ -9091,12 +9104,22 @@ ath10k_mac_op_assign_vif_chanctx(struct ieee80211_hw *hw,
 		return -EBUSY;
 	}
 
-	ret = ath10k_vdev_start(arvif, &ctx->def);
-	if (ret) {
-		ath10k_warn(ar, "failed to start vdev %i addr %pM on freq %d: %d\n",
-			    arvif->vdev_id, vif->addr,
-			    ctx->def.chan->center_freq, ret);
-		goto err;
+	if (QCA_REV_WCN3990(ar) && arvif->vdev_type == WMI_VDEV_TYPE_STA) {
+		/* WCN39xx firmware expects the BSS peer to exist before the
+		 * vdev is started. Defer the start until the peer is created.
+		 */
+		arvif->pending_chandef = ctx->def;
+		arvif->start_pending = true;
+		ath10k_dbg(ar, ATH10K_DBG_MAC, "mac vdev %i start deferred until peer create\n",
+			   arvif->vdev_id);
+	} else {
+		ret = ath10k_vdev_start(arvif, &ctx->def);
+		if (ret) {
+			ath10k_warn(ar, "failed to start vdev %i addr %pM on freq %d: %d\n",
+				    arvif->vdev_id, vif->addr,
+				    ctx->def.chan->center_freq, ret);
+			goto err;
+		}
 	}
 
 	arvif->is_started = true;
@@ -9141,7 +9164,10 @@ ath10k_mac_op_assign_vif_chanctx(struct ieee80211_hw *hw,
 	return 0;
 
 err_stop:
-	ath10k_vdev_stop(arvif);
+	if (arvif->start_pending)
+		arvif->start_pending = false;
+	else
+		ath10k_vdev_stop(arvif);
 	arvif->is_started = false;
 	ath10k_mac_vif_setup_ps(arvif);
 
@@ -9179,10 +9205,14 @@ ath10k_mac_op_unassign_vif_chanctx(struct ieee80211_hw *hw,
 		arvif->is_up = false;
 	}
 
-	ret = ath10k_vdev_stop(arvif);
-	if (ret)
-		ath10k_warn(ar, "failed to stop vdev %i: %d\n",
-			    arvif->vdev_id, ret);
+	if (arvif->start_pending) {
+		arvif->start_pending = false;
+	} else {
+		ret = ath10k_vdev_stop(arvif);
+		if (ret)
+			ath10k_warn(ar, "failed to stop vdev %i: %d\n",
+				    arvif->vdev_id, ret);
+	}
 
 	arvif->is_started = false;
 

@@ -592,6 +592,8 @@ struct ath10k_vif {
 
 	bool is_started;
 	bool is_up;
+	bool start_pending;
+	struct cfg80211_chan_def pending_chandef;
 	bool spectral_enabled;
 	bool ps;
 	u32 aid;
