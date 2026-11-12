@@ -121,6 +121,13 @@
 			status = "disabled";
 		};
 
+		pm8150l_lcdb: lcdb@ec00 {
+			compatible = "qcom,pm8150l-lcdb";
+			reg = <0xec00>;
+
+			status = "disabled";
+		};
+
 		pm8150l_lpg: pwm {
 			compatible = "qcom,pm8150l-lpg";
 
