@@ -1896,4 +1896,15 @@ config REGULATOR_QCOM_LABIBB
 	  boost regulator and IBB can be used as a negative boost regulator
 	  for LCD display panel.
 
+config REGULATOR_QCOM_LCDB
+	tristate "Qualcomm LCDB LCD bias regulator support"
+	depends on SPMI || COMPILE_TEST
+	help
+	  This driver supports the LCDB block found on Qualcomm PMICs such as
+	  PM8150L, which biases an LCD panel from a single boost: an LDO for
+	  the positive rail (AVDD) and an NCP for the negative rail (AVEE).
+
+	  Say M or Y here if your device has an LCD panel whose bias rails
+	  come from the PMIC rather than a discrete supply.
+
 endif
