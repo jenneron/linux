@@ -243,7 +243,6 @@ static const struct soc_enum hpvol_spkvol_switch =
 	SOC_ENUM_SINGLE(ES8326_HP_MISC, 6, 4, hp_spkvol_switch);
 
 static const struct snd_kcontrol_new es8326_snd_controls[] = {
-	SOC_SINGLE_TLV("DAC Playback Volume", ES8326_DACL_VOL, 0, 0xbf, 0, dac_vol_tlv),
 	SOC_ENUM("Playback Polarity", dacpol),
 	SOC_SINGLE_TLV("DAC Ramp Rate", ES8326_DAC_RAMPRATE, 0, 0x0f, 0, softramp_rate),
 	SOC_SINGLE_TLV("DRC Recovery Level", ES8326_DRC_RECOVERY, 0, 4, 0, drc_recovery_tlv),
@@ -282,10 +281,10 @@ static const struct snd_kcontrol_new es8326_snd_controls[] = {
 	SOC_SINGLE_EXT("HPR Volume", SND_SOC_NOPM, 0, 5, 0,
 			es8326_hprvol_get, es8326_hprvol_set),
 
-	SOC_SINGLE_TLV("HPL Playback Volume", ES8326_DACL_VOL, 0, 0xbf, 0, dac_vol_tlv),
-	SOC_SINGLE_TLV("HPR Playback Volume", ES8326_DACR_VOL, 0, 0xbf, 0, dac_vol_tlv),
-	SOC_SINGLE_TLV("SPKL Playback Volume", ES8326_SPKL_VOL, 0, 0xbf, 0, dac_vol_tlv),
-	SOC_SINGLE_TLV("SPKR Playback Volume", ES8326_SPKR_VOL, 0, 0xbf, 0, dac_vol_tlv),
+	SOC_DOUBLE_R_TLV("Headphones Playback Volume", ES8326_DACL_VOL, ES8326_DACR_VOL,
+			 0, 0xbf, 0, dac_vol_tlv),
+	SOC_DOUBLE_R_TLV("Speakers Playback Volume", ES8326_SPKL_VOL, ES8326_SPKR_VOL,
+			 0, 0xbf, 0, dac_vol_tlv),
 
 	SOC_ENUM("HPVol SPKVol Switch", hpvol_spkvol_switch),
 };
