@@ -24,6 +24,7 @@ struct hx83112a_desc {
 	unsigned long mode_flags;
 	const struct regulator_bulk_data *supplies;
 	unsigned int num_supplies;
+	bool staged_power;
 	int (*init)(struct hx83112a *ctx);
 };
 
@@ -371,19 +372,77 @@ static int hx83112a_disable(struct drm_panel *panel)
 	return dsi_ctx.accum_err;
 }
 
+static void hx83112a_power_off(struct hx83112a *ctx)
+{
+	gpiod_set_value_cansleep(ctx->reset_gpio, 1);
+
+	if (!ctx->desc->staged_power) {
+		gpiod_set_value_cansleep(ctx->enable_gpio, 0);
+		regulator_bulk_disable(ctx->desc->num_supplies, ctx->supplies);
+		return;
+	}
+
+	msleep(20);
+	regulator_disable(ctx->supplies[2].consumer);
+	msleep(20);
+	regulator_disable(ctx->supplies[1].consumer);
+	msleep(20);
+	gpiod_set_value_cansleep(ctx->enable_gpio, 0);
+	regulator_disable(ctx->supplies[0].consumer);
+}
+
+static int hx83112a_power_on(struct hx83112a *ctx)
+{
+	int ret;
+
+	if (!ctx->desc->staged_power) {
+		ret = regulator_bulk_enable(ctx->desc->num_supplies, ctx->supplies);
+		if (ret < 0)
+			return ret;
+		msleep(20);
+
+		gpiod_set_value_cansleep(ctx->enable_gpio, 1);
+		msleep(20);
+		return 0;
+	}
+
+	ret = regulator_enable(ctx->supplies[0].consumer);
+	if (ret)
+		return ret;
+	msleep(20);
+
+	gpiod_set_value_cansleep(ctx->enable_gpio, 1);
+	msleep(40);
+
+	ret = regulator_enable(ctx->supplies[1].consumer);
+	if (ret)
+		goto err_vdd1;
+	msleep(20);
+
+	ret = regulator_enable(ctx->supplies[2].consumer);
+	if (ret)
+		goto err_vsp;
+	msleep(30);
+
+	return 0;
+
+err_vsp:
+	regulator_disable(ctx->supplies[1].consumer);
+err_vdd1:
+	gpiod_set_value_cansleep(ctx->enable_gpio, 0);
+	regulator_disable(ctx->supplies[0].consumer);
+	return ret;
+}
+
 static int hx83112a_prepare(struct drm_panel *panel)
 {
 	struct hx83112a *ctx = to_hx83112a(panel);
 	struct device *dev = &ctx->dsi->dev;
 	int ret;
 
-	ret = regulator_bulk_enable(ctx->desc->num_supplies, ctx->supplies);
+	ret = hx83112a_power_on(ctx);
 	if (ret < 0)
 		return dev_err_probe(dev, ret, "Failed to enable regulators\n");
-	msleep(20);
-
-	gpiod_set_value_cansleep(ctx->enable_gpio, 1);
-	msleep(20);
 
 	hx83112a_reset(ctx);
 
@@ -392,9 +451,7 @@ static int hx83112a_prepare(struct drm_panel *panel)
 	ret = ctx->desc->init(ctx);
 	if (ret < 0) {
 		dev_err(dev, "Failed to initialize panel: %d\n", ret);
-		gpiod_set_value_cansleep(ctx->reset_gpio, 1);
-		gpiod_set_value_cansleep(ctx->enable_gpio, 0);
-		regulator_bulk_disable(ctx->desc->num_supplies, ctx->supplies);
+		hx83112a_power_off(ctx);
 		return ret;
 	}
 
@@ -405,9 +462,7 @@ static int hx83112a_unprepare(struct drm_panel *panel)
 {
 	struct hx83112a *ctx = to_hx83112a(panel);
 
-	gpiod_set_value_cansleep(ctx->reset_gpio, 1);
-	gpiod_set_value_cansleep(ctx->enable_gpio, 0);
-	regulator_bulk_disable(ctx->desc->num_supplies, ctx->supplies);
+	hx83112a_power_off(ctx);
 
 	return 0;
 }
@@ -446,6 +501,7 @@ static const struct hx83112a_desc mangmi_airx_desc = {
 		      MIPI_DSI_CLOCK_NON_CONTINUOUS,
 	.supplies = mangmi_airx_supplies,
 	.num_supplies = ARRAY_SIZE(mangmi_airx_supplies),
+	.staged_power = true,
 	.init = mangmi_airx_init,
 };
 
