@@ -12,6 +12,8 @@
 #include <linux/pm_runtime.h>
 #include <linux/reset-controller.h>
 #include <linux/of.h>
+#include <linux/delay.h>
+#include <linux/gpio/consumer.h>
 
 #include "common.h"
 #include "clk-alpha-pll.h"
@@ -463,6 +465,66 @@ int qcom_cc_probe_by_index(struct platform_device *pdev, int index,
 	return qcom_cc_really_probe(&pdev->dev, desc, regmap);
 }
 EXPORT_SYMBOL_GPL(qcom_cc_probe_by_index);
+
+
+#define QCOM_CC_SPLASH_OFF_MS		50
+
+void qcom_cc_release_dsi_panels(struct qcom_cc_panel_resets *resets)
+{
+	int i;
+
+	if (!resets)
+		return;
+
+	for (i = 0; i < resets->n; i++)
+		gpiod_put(resets->desc[i]);
+	resets->n = 0;
+}
+EXPORT_SYMBOL_GPL(qcom_cc_release_dsi_panels);
+
+int qcom_cc_blank_dsi_panels(struct qcom_cc_panel_resets *resets)
+{
+	struct device_node *dsi, *panel;
+	struct gpio_desc *desc;
+	int ret;
+
+	if (!resets)
+		return 0;
+
+	resets->n = 0;
+	for_each_compatible_node(dsi, NULL, "qcom,mdss-dsi-ctrl") {
+		for_each_available_child_of_node(dsi, panel) {
+			if (!of_property_present(panel, "reset-gpios"))
+				continue;
+			if (resets->n >= QCOM_CC_MAX_PANEL_RESETS) {
+				of_node_put(panel);
+				of_node_put(dsi);
+				goto held;
+			}
+			desc = fwnode_gpiod_get_index(of_fwnode_handle(panel),
+						      "reset", 0, GPIOD_OUT_HIGH,
+						      "dispcc-splash-off");
+			if (IS_ERR(desc)) {
+				ret = PTR_ERR(desc);
+				if (ret == -EPROBE_DEFER) {
+					of_node_put(panel);
+					of_node_put(dsi);
+					qcom_cc_release_dsi_panels(resets);
+					return ret;
+				}
+				continue;
+			}
+			resets->desc[resets->n++] = desc;
+		}
+	}
+
+held:
+	if (resets->n)
+		msleep(QCOM_CC_SPLASH_OFF_MS);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(qcom_cc_blank_dsi_panels);
 
 MODULE_LICENSE("GPL v2");
 MODULE_DESCRIPTION("QTI Common Clock module");

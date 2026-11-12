@@ -1253,6 +1253,7 @@ MODULE_DEVICE_TABLE(of, disp_cc_sm8250_match_table);
 
 static int disp_cc_sm8250_probe(struct platform_device *pdev)
 {
+	struct qcom_cc_panel_resets panels = { };
 	struct regmap *regmap;
 	int ret;
 
@@ -1359,6 +1360,12 @@ static int disp_cc_sm8250_probe(struct platform_device *pdev)
 		disp_cc_sm8250_clocks[DISP_CC_MDSS_EDP_GTC_CLK_SRC] = NULL;
 	}
 
+	ret = qcom_cc_blank_dsi_panels(&panels);
+	if (ret) {
+		pm_runtime_put(&pdev->dev);
+		return ret;
+	}
+
 	if (of_device_is_compatible(pdev->dev.of_node, "qcom,sm8350-dispcc")) {
 		clk_lucid_5lpe_pll_configure(&disp_cc_pll0, regmap, &disp_cc_pll0_config);
 		clk_lucid_5lpe_pll_configure(&disp_cc_pll1, regmap, &disp_cc_pll1_config);
@@ -1374,6 +1381,7 @@ static int disp_cc_sm8250_probe(struct platform_device *pdev)
 	qcom_branch_set_clk_en(regmap, 0x605c); /* DISP_CC_XO_CLK */
 
 	ret = qcom_cc_really_probe(&pdev->dev, &disp_cc_sm8250_desc, regmap);
+	qcom_cc_release_dsi_panels(&panels);
 
 	pm_runtime_put(&pdev->dev);
 

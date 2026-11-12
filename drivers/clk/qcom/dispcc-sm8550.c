@@ -1764,6 +1764,7 @@ MODULE_DEVICE_TABLE(of, disp_cc_sm8550_match_table);
 
 static int disp_cc_sm8550_probe(struct platform_device *pdev)
 {
+	struct qcom_cc_panel_resets panels = { };
 	struct regmap *regmap;
 	int ret;
 
@@ -1794,6 +1795,10 @@ static int disp_cc_sm8550_probe(struct platform_device *pdev)
 		disp_cc_mdss_mdp_clk_src.freq_tbl = ftbl_disp_cc_mdss_mdp_clk_src_sar2130p;
 	}
 
+	ret = qcom_cc_blank_dsi_panels(&panels);
+	if (ret)
+		goto err_put_rpm;
+
 	clk_lucid_ole_pll_configure(&disp_cc_pll0, regmap, &disp_cc_pll0_config);
 	clk_lucid_ole_pll_configure(&disp_cc_pll1, regmap, &disp_cc_pll1_config);
 
@@ -1804,6 +1809,7 @@ static int disp_cc_sm8550_probe(struct platform_device *pdev)
 	qcom_branch_set_clk_en(regmap, 0xe054); /* DISP_CC_XO_CLK */
 
 	ret = qcom_cc_really_probe(&pdev->dev, &disp_cc_sm8550_desc, regmap);
+	qcom_cc_release_dsi_panels(&panels);
 	if (ret)
 		goto err_put_rpm;
 

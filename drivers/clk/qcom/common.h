@@ -11,6 +11,7 @@ struct qcom_reset_map;
 struct regmap;
 struct freq_tbl;
 struct clk_hw;
+struct gpio_desc;
 
 #define PLL_LOCK_COUNT_SHIFT	8
 #define PLL_LOCK_COUNT_MASK	0x3f
@@ -88,5 +89,15 @@ extern int qcom_cc_probe(struct platform_device *pdev,
 			 const struct qcom_cc_desc *desc);
 extern int qcom_cc_probe_by_index(struct platform_device *pdev, int index,
 				  const struct qcom_cc_desc *desc);
+
+#define QCOM_CC_MAX_PANEL_RESETS	4
+
+struct qcom_cc_panel_resets {
+	struct gpio_desc *desc[QCOM_CC_MAX_PANEL_RESETS];
+	int n;
+};
+
+int qcom_cc_blank_dsi_panels(struct qcom_cc_panel_resets *resets);
+void qcom_cc_release_dsi_panels(struct qcom_cc_panel_resets *resets);
 
 #endif

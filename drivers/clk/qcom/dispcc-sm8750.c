@@ -1902,6 +1902,7 @@ MODULE_DEVICE_TABLE(of, disp_cc_sm8750_match_table);
 
 static int disp_cc_sm8750_probe(struct platform_device *pdev)
 {
+	struct qcom_cc_panel_resets panels = { };
 	struct regmap *regmap;
 	int ret;
 
@@ -1919,6 +1920,10 @@ static int disp_cc_sm8750_probe(struct platform_device *pdev)
 		goto err_put_rpm;
 	}
 
+	ret = qcom_cc_blank_dsi_panels(&panels);
+	if (ret)
+		goto err_put_rpm;
+
 	clk_taycan_elu_pll_configure(&disp_cc_pll0, regmap, &disp_cc_pll0_config);
 	clk_taycan_elu_pll_configure(&disp_cc_pll1, regmap, &disp_cc_pll1_config);
 	clk_pongo_elu_pll_configure(&disp_cc_pll2, regmap, &disp_cc_pll2_config);
@@ -1933,6 +1938,7 @@ static int disp_cc_sm8750_probe(struct platform_device *pdev)
 	qcom_branch_set_clk_en(regmap, 0xc008); /* DISP_CC_MDSS_RSCC_VSYNC_CLK */
 
 	ret = qcom_cc_really_probe(&pdev->dev, &disp_cc_sm8750_desc, regmap);
+	qcom_cc_release_dsi_panels(&panels);
 	if (ret)
 		goto err_put_rpm;
 
