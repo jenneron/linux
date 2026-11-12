@@ -38,6 +38,7 @@ struct ch13726a_desc {
 	unsigned int width_mm;
 	unsigned int height_mm;
 	unsigned int bpc;
+	unsigned int exit_sleep_delay_ms;
 
 	const struct drm_display_mode *modes;
 	unsigned int num_modes;
@@ -68,6 +69,8 @@ static int ch13726a_on(struct ch13726a_panel *ctx)
 	mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0xb9, 0x00);
 
 	mipi_dsi_dcs_exit_sleep_mode_multi(&dsi_ctx);
+	if (ctx->desc->exit_sleep_delay_ms)
+		mipi_dsi_msleep(&dsi_ctx, ctx->desc->exit_sleep_delay_ms);
 
 	mipi_dsi_dcs_set_display_on_multi(&dsi_ctx);
 
@@ -158,6 +161,64 @@ static struct ch13726a_desc thor_bottom_desc = {
 	.width_mm = 65,
 	.height_mm = 75,
 	.bpc = 8,
+};
+
+static const struct drm_display_mode retroidpocket_rp5_modes[] = {
+	{
+		/* 60Hz */
+		.clock = (1080 + 12 + 4 + 12) * (1920 + 12 + 4 + 12) * 60 / 1000,
+		.hdisplay = 1080,
+		.hsync_start = 1080 + 12,
+		.hsync_end = 1080 + 12 + 4,
+		.htotal = 1080 + 12 + 4 + 12,
+		.vdisplay = 1920,
+		.vsync_start = 1920 + 12,
+		.vsync_end = 1920 + 12 + 4,
+		.vtotal = 1920 + 12 + 4 + 12,
+	},
+};
+
+static struct ch13726a_desc retroidpocket_rp5_desc = {
+	.modes = retroidpocket_rp5_modes,
+	.num_modes = ARRAY_SIZE(retroidpocket_rp5_modes),
+	.width_mm = 68,
+	.height_mm = 121,
+	.bpc = 8,
+	.exit_sleep_delay_ms = 120,
+};
+
+static const struct drm_display_mode retroidpocket_rpmini_modes[] = {
+	{
+		/* 60Hz */
+		.clock = (960 + 28 + 4 + 36) * (1280 + 16 + 4 + 8) * 60 / 1000,
+		.hdisplay = 960,
+		.hsync_start = 960 + 28,
+		.hsync_end = 960 + 28 + 4,
+		.htotal = 960 + 28 + 4 + 36,
+		.vdisplay = 1280,
+		.vsync_start = 1280 + 16,
+		.vsync_end = 1280 + 16 + 4,
+		.vtotal = 1280 + 16 + 4 + 8,
+	},
+};
+
+static struct ch13726a_desc retroidpocket_rpmini_desc = {
+	.modes = retroidpocket_rpmini_modes,
+	.num_modes = ARRAY_SIZE(retroidpocket_rpmini_modes),
+	.width_mm = 65,
+	.height_mm = 75,
+	.bpc = 8,
+	.exit_sleep_delay_ms = 120,
+};
+
+/* RP Mini V2 and Thor Lite: the 1080x1240 Thor panel, 60Hz only on SM8250 */
+static struct ch13726a_desc retroidpocket_rpminiv2_desc = {
+	.modes = &thor_bottom_modes[1],
+	.num_modes = 1,
+	.width_mm = 65,
+	.height_mm = 75,
+	.bpc = 8,
+	.exit_sleep_delay_ms = 120,
 };
 
 static int ch13726a_get_modes(struct drm_panel *panel,
@@ -316,6 +377,10 @@ static void ch13726a_remove(struct mipi_dsi_device *dsi)
 
 static const struct of_device_id ch13726a_of_match[] = {
 	{ .compatible = "ayntec,thor-panel-bottom", .data = &thor_bottom_desc },
+	{ .compatible = "ayntec,thorlite-panel-bottom", .data = &retroidpocket_rpminiv2_desc },
+	{ .compatible = "retroidpocket,rp5-panel", .data = &retroidpocket_rp5_desc },
+	{ .compatible = "retroidpocket,rpmini-panel", .data = &retroidpocket_rpmini_desc },
+	{ .compatible = "retroidpocket,rpminiv2-panel", .data = &retroidpocket_rpminiv2_desc },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, ch13726a_of_match);

@@ -19,7 +19,12 @@ allOf:
 properties:
   compatible:
     items:
-      - const: ayntec,thor-panel-bottom
+      - enum:
+          - ayntec,thor-panel-bottom
+          - ayntec,thorlite-panel-bottom
+          - retroidpocket,rp5-panel
+          - retroidpocket,rpmini-panel
+          - retroidpocket,rpminiv2-panel
       - const: chipwealth,ch13726a
 
   reg:
