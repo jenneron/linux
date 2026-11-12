@@ -617,6 +617,18 @@ config DRM_PANEL_MAGNACHIP_D53E6EA8966
 	  with the Magnachip D53E6EA8966 panel IC. This panel receives
 	  video data via DSI but commands via 9-bit SPI using DBI.
 
+config DRM_PANEL_MANGMI_AIR_Y_PRO
+	tristate "MANGMI Air Y Pro MIPI-DSI panel"
+	depends on OF
+	depends on DRM_MIPI_DSI
+	depends on BACKLIGHT_CLASS_DEVICE
+	help
+	  Say Y here if you want to enable support for the DSI panel fitted
+	  to the MANGMI Air Y Pro handheld. It is a 4 inch 1280x960
+	  60Hz video mode panel on four DSI lanes, driven by an external
+	  WLED backlight. The panel is initialised through a vendor specific
+	  paged register interface.
+
 config DRM_PANEL_MANTIX_MLAF057WE51
 	tristate "Mantix MLAF057WE51-X MIPI-DSI LCD panel"
 	depends on OF
