@@ -69,6 +69,7 @@ struct sy7758 {
 	struct regmap *regmap;
 	struct gpio_desc *gpio;
 	struct backlight_device *bl;
+	bool led_on;
 };
 
 static const struct regmap_config sy7758_regmap_config = {
@@ -77,11 +78,24 @@ static const struct regmap_config sy7758_regmap_config = {
 	.max_register = REG_MAX,
 };
 
+static int sy7758_init(struct sy7758 *sydev);
+
 static int sy7758_backlight_update_status(struct backlight_device *backlight_dev)
 {
 	struct sy7758 *sydev = bl_get_data(backlight_dev);
 	unsigned int brightness = backlight_get_brightness(backlight_dev);
 	int ret;
+
+	/*
+	 * The chip can drop its configuration while the brightness is zero,
+	 * so program it again before the backlight comes back on.
+	 */
+	if (brightness && !sydev->led_on) {
+		ret = sy7758_init(sydev);
+		if (ret)
+			return ret;
+	}
+	sydev->led_on = brightness > 0;
 
 	ret = regmap_write(sydev->regmap, REG_BRT_12BIT_L,
 			   FIELD_PREP(MSK_BRT_12BIT_L,
@@ -152,6 +166,8 @@ static int sy7758_init(struct sy7758 *sydev)
 			   BIT_CFG2_BL_ON | BIT_CFG2_UVLO_EN);
 	if (ret)
 		return ret;
+
+	sydev->led_on = true;
 
 	return 0;
 }
