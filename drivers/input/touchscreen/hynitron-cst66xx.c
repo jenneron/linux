@@ -30,6 +30,7 @@ struct cst66xx_ts {
 	struct input_dev *input;
 	struct gpio_desc *reset_gpio;
 	struct regulator *vdd;
+	struct regulator *iovcc;
 	struct touchscreen_properties prop;
 };
 
@@ -208,6 +209,19 @@ static int cst66xx_probe(struct i2c_client *client)
 	if (IS_ERR(ts->vdd))
 		return dev_err_probe(dev, PTR_ERR(ts->vdd),
 				     "failed to get vdd regulator\n");
+
+	ts->iovcc = devm_regulator_get(dev, "iovcc");
+	if (IS_ERR(ts->iovcc))
+		return dev_err_probe(dev, PTR_ERR(ts->iovcc),
+				     "failed to get iovcc regulator\n");
+
+	ret = regulator_enable(ts->iovcc);
+	if (ret)
+		return dev_err_probe(dev, ret, "failed to enable iovcc regulator\n");
+
+	ret = devm_add_action_or_reset(dev, cst66xx_disable_regulator, ts->iovcc);
+	if (ret)
+		return ret;
 
 	ret = regulator_enable(ts->vdd);
 	if (ret)
