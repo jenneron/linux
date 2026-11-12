@@ -15,11 +15,6 @@
 
 extern const char *qcom_serial_number;
 
-/* Define a static, predefined BD_ADDR structure */
-static const bdaddr_t static_bdaddr = {
-	.b = { 0x00, 0x03, 0x7F, 0x33, 0x22, 0x11 }
-};
-
 /**
  * generate_bdaddr_from_serial - Generates a BD_ADDR using the serial number
  * @bdaddr: Pointer to bdaddr_t structure to populate

@@ -184,11 +184,6 @@ struct macaddr_t {
 	u8 b[ETH_ALEN];
 };
 
-/* Define a static, predefined MAC_ADDR structure */
-static const struct macaddr_t static_macaddr = {
-	.b = { 0x00, 0x03, 0x7F, 0x11, 0x22, 0x33 }
-};
-
 /**
  * generate_macaddr_from_serial - Generates a MAC_ADDR using the serial number
  * @macaddr: Pointer to macaddr_t structure to populate
