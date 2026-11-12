@@ -138,7 +138,7 @@ static int parse_dt(struct device *dev, struct synaptics_dsx_board_data *bdata)
 		else
 			bdata->ub_i2c_addr = (unsigned short)value;
 	} else {
-		bdata->ub_i2c_addr = -1;
+		bdata->ub_i2c_addr = USHRT_MAX;
 	}
 
 	return 0;
@@ -148,7 +148,7 @@ static int parse_dt(struct device *dev, struct synaptics_dsx_board_data *bdata)
 static void synaptics_rmi4_i2c_check_addr(struct synaptics_rmi4_data *rmi4_data,
 		struct i2c_client *i2c)
 {
-	if (hw_if.board_data->ub_i2c_addr == -1)
+	if (hw_if.board_data->ub_i2c_addr == USHRT_MAX)
 		return;
 
 	if (hw_if.board_data->i2c_addr == i2c->addr)
@@ -162,7 +162,7 @@ static void synaptics_rmi4_i2c_check_addr(struct synaptics_rmi4_data *rmi4_data,
 static int synaptics_rmi4_i2c_set_page(struct synaptics_rmi4_data *rmi4_data,
 		unsigned short addr)
 {
-	int retval;
+	int retval = -EIO;
 	unsigned char retry;
 	unsigned char buf[PAGE_SELECT_LEN];
 	unsigned char page;
