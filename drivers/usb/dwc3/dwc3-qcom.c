@@ -81,6 +81,9 @@ struct dwc3_qcom {
 	enum usb_dr_mode	mode;
 	bool			is_suspended;
 	bool			pm_suspended;
+	struct mutex		pm_lock;
+	bool			role_pending;
+	enum usb_role		pending_role;
 	struct icc_path		*icc_path_ddr;
 	struct icc_path		*icc_path_apps;
 
@@ -562,6 +565,14 @@ static void dwc3_qcom_set_role_notifier(struct dwc3 *dwc, enum usb_role next_rol
 {
 	struct dwc3_qcom *qcom = to_dwc3_qcom(dwc);
 
+	guard(mutex)(&qcom->pm_lock);
+
+	if (qcom->pm_suspended) {
+		qcom->pending_role = next_role;
+		qcom->role_pending = true;
+		return;
+	}
+
 	if (qcom->current_role == next_role)
 		return;
 
@@ -623,6 +634,7 @@ static int dwc3_qcom_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	qcom->dev = &pdev->dev;
+	mutex_init(&qcom->pm_lock);
 
 	qcom->resets = devm_reset_control_array_get_optional_exclusive(dev);
 	if (IS_ERR(qcom->resets)) {
@@ -756,6 +768,8 @@ static int dwc3_qcom_pm_suspend(struct device *dev)
 	if (ret)
 		return ret;
 
+	guard(mutex)(&qcom->pm_lock);
+
 	ret = dwc3_qcom_suspend(qcom, wakeup);
 	if (ret)
 		return ret;
@@ -772,11 +786,20 @@ static int dwc3_qcom_pm_resume(struct device *dev)
 	bool wakeup = device_may_wakeup(dev);
 	int ret;
 
-	ret = dwc3_qcom_resume(qcom, wakeup);
-	if (ret)
-		return ret;
+	scoped_guard(mutex, &qcom->pm_lock) {
+		ret = dwc3_qcom_resume(qcom, wakeup);
+		if (ret)
+			return ret;
 
-	qcom->pm_suspended = false;
+		qcom->pm_suspended = false;
+
+		if (qcom->role_pending && qcom->current_role != qcom->pending_role) {
+			dwc3_qcom_vbus_override_enable(qcom,
+						       qcom->current_role != USB_ROLE_DEVICE);
+			qcom->current_role = qcom->pending_role;
+		}
+		qcom->role_pending = false;
+	}
 
 	ret = dwc3_pm_resume(&qcom->dwc);
 	if (ret)
