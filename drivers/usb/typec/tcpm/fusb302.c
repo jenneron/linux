@@ -1579,7 +1579,7 @@ static void fusb302_irq_work(struct work_struct *work)
 
 	if (interrupt & FUSB_REG_INTERRUPT_COLLISION) {
 		fusb302_log(chip, "IRQ: PD collision");
-		tcpm_pd_transmit_complete(chip->tcpm_port, TCPC_TX_FAILED);
+		tcpm_pd_transmit_complete(chip->tcpm_port, TCPC_TX_DISCARDED);
 	}
 
 	if (interrupta & FUSB_REG_INTERRUPTA_RETRYFAIL) {
