@@ -1298,7 +1298,7 @@ static int rproc_start(struct rproc *rproc, const struct firmware *fw)
 	/* power up the remote processor */
 	ret = rproc->ops->start(rproc);
 	if (ret) {
-		dev_err(dev, "can't start rproc %s: %d\n", rproc->name, ret);
+		//dev_err(dev, "can't start rproc %s: %d\n", rproc->name, ret);
 		goto unprepare_subdevices;
 	}
 

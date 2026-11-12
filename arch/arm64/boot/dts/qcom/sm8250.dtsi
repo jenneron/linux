@@ -3264,6 +3264,8 @@
 			clocks = <&aoss_qmp>;
 			clock-names = "apb_pclk";
 
+			status = "disabled";
+
 			out-ports {
 				port {
 					stm_out: endpoint {

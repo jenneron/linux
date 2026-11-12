@@ -860,8 +860,8 @@ static void device_woke_up(struct hci_uart *hu)
 	switch (qca->tx_ibs_state) {
 	case HCI_IBS_TX_AWAKE:
 		/* Expect one if we send 2 WAKEs */
-		BT_DBG("Received HCI_IBS_WAKE_ACK in tx state %d",
-		       qca->tx_ibs_state);
+		//BT_DBG("Received HCI_IBS_WAKE_ACK in tx state %d",
+		//       qca->tx_ibs_state);
 		break;
 
 	case HCI_IBS_TX_WAKING:
@@ -878,8 +878,8 @@ static void device_woke_up(struct hci_uart *hu)
 
 	case HCI_IBS_TX_ASLEEP:
 	default:
-		BT_ERR("Received HCI_IBS_WAKE_ACK in tx state %d",
-		       qca->tx_ibs_state);
+		//BT_ERR("Received HCI_IBS_WAKE_ACK in tx state %d",
+		//       qca->tx_ibs_state);
 		break;
 	}
 
@@ -1288,7 +1288,7 @@ static int qca_recv(struct hci_uart *hu, const void *data, int count)
 				  qca_recv_pkts, ARRAY_SIZE(qca_recv_pkts));
 	if (IS_ERR(qca->rx_skb)) {
 		int err = PTR_ERR(qca->rx_skb);
-		bt_dev_err(hu->hdev, "Frame reassembly failed (%d)", err);
+		//bt_dev_err(hu->hdev, "Frame reassembly failed (%d)", err);
 		qca->rx_skb = NULL;
 		return err;
 	}

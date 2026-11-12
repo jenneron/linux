@@ -1576,7 +1576,7 @@ static int va_macro_probe(struct platform_device *pdev)
 	ret = of_property_read_u32(dev->of_node, "qcom,dmic-sample-rate",
 				   &sample_rate);
 	if (ret) {
-		dev_err(dev, "qcom,dmic-sample-rate dt entry missing\n");
+		//dev_err(dev, "qcom,dmic-sample-rate dt entry missing\n");
 		va->dmic_clk_div = VA_MACRO_CLK_DIV_2;
 	} else {
 		ret = va_macro_validate_dmic_sample_rate(sample_rate, va);

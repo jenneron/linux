@@ -167,9 +167,9 @@ int psci_set_osi_mode(bool enable)
 			PSCI_1_0_SUSPEND_MODE_PC;
 
 	err = invoke_psci_fn(PSCI_1_0_FN_SET_SUSPEND_MODE, suspend_mode, 0, 0);
-	if (err < 0)
-		pr_info(FW_BUG "failed to set %s mode: %d\n",
-				enable ? "OSI" : "PC", err);
+	//if (err < 0)
+	//	pr_info(FW_BUG "failed to set %s mode: %d\n",
+	//			enable ? "OSI" : "PC", err);
 	return psci_to_linux_errno(err);
 }
 
