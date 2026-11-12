@@ -421,6 +421,11 @@ static inline int adreno_is_a612(const struct adreno_gpu *gpu)
 	return gpu->info->chip_ids[0] == 0x06010200;
 }
 
+static inline int adreno_is_a613(const struct adreno_gpu *gpu)
+{
+	return gpu->info->chip_ids[0] == 0x06010300;
+}
+
 static inline bool adreno_has_rgmu(const struct adreno_gpu *gpu)
 {
 	return adreno_is_a612(gpu);
@@ -502,6 +507,7 @@ static inline int adreno_is_a610_family(const struct adreno_gpu *gpu)
 		return false;
 	return adreno_is_a610(gpu) ||
 	       adreno_is_a612(gpu) ||
+	       adreno_is_a613(gpu) ||
 	       adreno_is_a702(gpu);
 }
 

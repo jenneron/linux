@@ -730,6 +730,30 @@ static const struct adreno_info a6xx_gpus[] = {
 			.prim_fifo_threshold = 0x00080000,
 		},
 	}, {
+		.chip_ids = ADRENO_CHIP_IDS(0x06010300),
+		.family = ADRENO_6XX_GEN1,
+		.fw = {
+			[ADRENO_FW_SQE] = "a630_sqe.fw",
+		},
+		.gmem = (SZ_128K + SZ_4K),
+		.quirks = ADRENO_QUIRK_4GB_VA,
+		.inactive_period = DRM_MSM_INACTIVE_PERIOD,
+		.funcs = &a6xx_gmuwrapper_funcs,
+		.zapfw = "a613_zap.mbn",
+		.a6xx = &(const struct a6xx_info) {
+			.hwcg = a612_hwcg,
+			.protect = &a630_protect,
+			.gbif_cx = a640_gbif,
+			.gmu_cgc_mode = 0x00020202,
+			.prim_fifo_threshold = 0x00080000,
+		},
+		.speedbins = ADRENO_SPEEDBINS(
+			{ 0, 0 },
+			{ 201, 1 },
+			{ 213, 2 },
+			{ 162, 3 },
+		),
+	}, {
 		.chip_ids = ADRENO_CHIP_IDS(0x06010500),
 		.family = ADRENO_6XX_GEN1,
 		.revn = 615,
