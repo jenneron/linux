@@ -36,7 +36,9 @@ struct panel_info {
 	struct regulator_bulk_data *supplies;
 	bool enabled;
 
+	int vrefresh;
 	u16 frame_len_120;
+	u16 frame_len_60;
 };
 
 struct panel_desc {
@@ -55,6 +57,7 @@ struct panel_desc {
 	struct drm_dsc_config dsc;
 
 	u16 frame_len_120;
+	u16 frame_len_60;
 };
 
 static const struct regulator_bulk_data panel_supplies[] = {
@@ -70,10 +73,33 @@ static inline struct panel_info *to_panel_info(struct drm_panel *panel)
 	return container_of(panel, struct panel_info, panel);
 }
 
+static int icna35xx_get_current_vrefresh(struct panel_info *pinfo)
+{
+	struct drm_connector *connector = pinfo->connector;
+	struct drm_crtc_state *crtc_state;
+	unsigned int i;
+
+	/* Use the default (first) mode if no info is available yet */
+	if (connector && connector->state && connector->state->crtc) {
+		crtc_state = connector->state->crtc->state;
+
+		for (i = 0; i < pinfo->desc->num_modes; i++) {
+			if (drm_mode_match(&crtc_state->mode,
+					   &pinfo->desc->modes[i],
+					   DRM_MODE_MATCH_TIMINGS |
+					   DRM_MODE_MATCH_CLOCK))
+				return drm_mode_vrefresh(&pinfo->desc->modes[i]);
+		}
+	}
+
+	return drm_mode_vrefresh(&pinfo->desc->modes[0]);
+}
+
 static int icna3512_init_sequence(struct panel_info *pinfo)
 {
 	struct mipi_dsi_multi_context dsi_ctx = { .dsi = pinfo->dsi };
 	struct drm_dsc_picture_parameter_set pps;
+	int vrefresh = icna35xx_get_current_vrefresh(pinfo);
 
 	pinfo->dsi->mode_flags |= MIPI_DSI_MODE_LPM;
 
@@ -92,8 +118,42 @@ static int icna3512_init_sequence(struct panel_info *pinfo)
 
 	mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0x9F, 0x01);
 
-	/* 165 hz */
-	mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0x48, 0x20);
+	switch (vrefresh) {
+	case 120:
+		mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0xB3,
+			0x00, 0xE0, 0xA0, 0x10, 0xC8, 0x00, 0x02, 0x83,
+			0x00, 0x10, 0x14, 0x00, 0x00, 0xC3, 0x00, 0x10,
+			0x14, 0x00, 0x00, 0xE0, 0x10, 0x10, 0x9C, 0x00,
+			0x00, 0xE0, 0xA0, 0x10, 0xC8, 0x22, 0x18, 0x18,
+			0x18, 0x18, 0x18);
+		mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0x9F, 0x07);
+		mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0xB5,
+			0x04, 0x0C, 0x08, 0x0C, 0x04, 0x00, 0xC4);
+		mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0xD9,
+			0x88, 0x40, 0x40, 0x88, 0x40, 0x40, 0x00, 0xEB,
+			0x11, 0xFF);
+		mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0xCE,
+			0x01, 0x01, 0x01, 0x01, 0x04, 0x09, 0x2C);
+		mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0x48, 0x30);
+		break;
+	case 60:
+		mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0xB3,
+			0x00, 0xE0, 0xA0, 0x10, 0xC8, 0x00);
+		mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0x9F, 0x07);
+		mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0xB2,
+			0x04, 0x18, 0x08, 0x0C, 0x02, 0x00, 0xC4);
+		mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0xD3,
+			0x88, 0x4A, 0x4A, 0x88, 0x4A, 0x4A, 0x00, 0xEB,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
+		mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0xCB,
+			0x01, 0x01, 0x01, 0x01, 0x04, 0x2C);
+		mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0x48, 0x00);
+		break;
+	default:
+		/* 165 hz */
+		mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0x48, 0x20);
+		break;
+	}
 
 	drm_dsc_pps_payload_pack(&pps, &pinfo->desc->dsc);
 	mipi_dsi_picture_parameter_set_multi(&dsi_ctx, &pps);
@@ -113,10 +173,24 @@ static void icna3520_set_frame_len(struct mipi_dsi_multi_context *dsi_ctx,
 		0x00, 0xD8, 0x00, 0x1C,
 		pinfo->frame_len_120 >> 8, pinfo->frame_len_120 & 0xff,
 	};
+	u8 payload_60[] = {
+		0xB3,
+		0x00, 0xDB, 0x00, 0x1C, 0x00, 0x1C, 0x00,
+		0x00, 0xDB, 0x00, 0x1C,
+		pinfo->frame_len_60 >> 8, pinfo->frame_len_60 & 0xff, 0x00,
+	};
 
-	mipi_dsi_generic_write_seq_multi(dsi_ctx, 0x48, 0x00);
-	mipi_dsi_generic_write_seq_multi(dsi_ctx, 0x9F, 0x00);
-	mipi_dsi_generic_write_multi(dsi_ctx, payload_120, sizeof(payload_120));
+	if (pinfo->vrefresh == 60) {
+		mipi_dsi_generic_write_seq_multi(dsi_ctx, 0x48, 0x10);
+		mipi_dsi_generic_write_seq_multi(dsi_ctx, 0x9F, 0x00);
+		mipi_dsi_generic_write_multi(dsi_ctx, payload_60,
+					     sizeof(payload_60));
+	} else {
+		mipi_dsi_generic_write_seq_multi(dsi_ctx, 0x48, 0x00);
+		mipi_dsi_generic_write_seq_multi(dsi_ctx, 0x9F, 0x00);
+		mipi_dsi_generic_write_multi(dsi_ctx, payload_120,
+					     sizeof(payload_120));
+	}
 }
 
 static int icna3520_init_sequence(struct panel_info *pinfo)
@@ -136,7 +210,7 @@ static int icna3520_init_sequence(struct panel_info *pinfo)
 
 	mipi_dsi_msleep(&dsi_ctx, 120);
 
-	/* 120 hz */
+	pinfo->vrefresh = icna35xx_get_current_vrefresh(pinfo);
 	icna3520_set_frame_len(&dsi_ctx, pinfo);
 
 	mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0x9F, 0x01);
@@ -170,7 +244,31 @@ static const struct drm_display_mode odin2portal_modes[] = {
 		.vsync_start = 1920 + 20,
 		.vsync_end = 1920 + 20 + 1,
 		.vtotal = 1920 + 20 + 1 + 15,
-	}
+	},
+	{
+		/* 120Hz */
+		.clock = (1080 + 156 + 1 + 23) * (1920 + 412 + 1 + 15) * 120 / 1000,
+		.hdisplay = 1080,
+		.hsync_start = 1080 + 156,
+		.hsync_end = 1080 + 156 + 1,
+		.htotal = 1080 + 156 + 1 + 23,
+		.vdisplay = 1920,
+		.vsync_start = 1920 + 412,
+		.vsync_end = 1920 + 412 + 1,
+		.vtotal = 1920 + 412 + 1 + 15,
+	},
+	{
+		/* 60Hz */
+		.clock = (1080 + 156 + 1 + 23) * (1920 + 2760 + 1 + 15) * 60 / 1000,
+		.hdisplay = 1080,
+		.hsync_start = 1080 + 156,
+		.hsync_end = 1080 + 156 + 1,
+		.htotal = 1080 + 156 + 1 + 23,
+		.vdisplay = 1920,
+		.vsync_start = 1920 + 2760,
+		.vsync_end = 1920 + 2760 + 1,
+		.vtotal = 1920 + 2760 + 1 + 15,
+	},
 };
 
 static const struct drm_display_mode thor_top_modes[] = {
@@ -185,7 +283,19 @@ static const struct drm_display_mode thor_top_modes[] = {
 		.vsync_start = 1920 + 28,
 		.vsync_end = 1920 + 28 + 1,
 		.vtotal = 1920 + 28 + 1 + 28,
-	}
+	},
+	{
+		/* 60Hz */
+		.clock = (1080 + 24 + 1 + 24) * (1920 + 2006 + 1 + 28) * 60 / 1000,
+		.hdisplay = 1080,
+		.hsync_start = 1080 + 24,
+		.hsync_end = 1080 + 24 + 1,
+		.htotal = 1080 + 24 + 1 + 24,
+		.vdisplay = 1920,
+		.vsync_start = 1920 + 2006,
+		.vsync_end = 1920 + 2006 + 1,
+		.vtotal = 1920 + 2006 + 1 + 28,
+	},
 };
 
 static struct panel_desc odin2portal_desc = {
@@ -223,6 +333,7 @@ static struct panel_desc thor_top_desc = {
 			MIPI_DSI_MODE_LPM,
 	.init_sequence = icna3520_init_sequence,
 	.frame_len_120 = 0x4C,
+	.frame_len_60 = 0x7D6,
 	.dsc = {
 		.dsc_version_major = 0x1,
 		.dsc_version_minor = 0x1,
@@ -300,8 +411,30 @@ static int icna35xx_get_modes(struct drm_panel *panel,
 			       struct drm_connector *connector)
 {
 	struct panel_info *pinfo = to_panel_info(panel);
+	unsigned int i;
 
-	return drm_connector_helper_get_modes_fixed(connector, pinfo->desc->modes);
+	for (i = 0; i < pinfo->desc->num_modes; i++) {
+		const struct drm_display_mode *m = &pinfo->desc->modes[i];
+		struct drm_display_mode *mode;
+
+		mode = drm_mode_duplicate(connector->dev, m);
+		if (!mode)
+			return -ENOMEM;
+
+		mode->type = DRM_MODE_TYPE_DRIVER;
+		if (i == 0)
+			mode->type |= DRM_MODE_TYPE_PREFERRED;
+
+		drm_mode_set_name(mode);
+		drm_mode_probed_add(connector, mode);
+	}
+
+	connector->display_info.width_mm = pinfo->desc->width_mm;
+	connector->display_info.height_mm = pinfo->desc->height_mm;
+	connector->display_info.bpc = pinfo->desc->bpc;
+	pinfo->connector = connector;
+
+	return pinfo->desc->num_modes;
 }
 
 static enum drm_panel_orientation icna35xx_get_orientation(struct drm_panel *panel)
@@ -367,6 +500,38 @@ static struct backlight_device *icna35xx_create_backlight(struct mipi_dsi_device
 					      &icna35xx_bl_ops, &props);
 }
 
+static ssize_t icna3520_frame_len_store(struct device *dev, u16 *frame_len,
+					int vrefresh, u16 min, u16 max,
+					const char *buf, size_t count)
+{
+	struct panel_info *pinfo = dev_get_drvdata(dev);
+	struct mipi_dsi_multi_context dsi_ctx = { .dsi = pinfo->dsi };
+	u16 val;
+	int ret;
+
+	ret = kstrtou16(buf, 0, &val);
+	if (ret)
+		return ret;
+
+	if (val < min || val > max)
+		return -EINVAL;
+
+	*frame_len = val;
+
+	if (!pinfo->enabled || pinfo->vrefresh != vrefresh)
+		return count;
+
+	pinfo->dsi->mode_flags &= ~MIPI_DSI_MODE_LPM;
+	icna3520_set_frame_len(&dsi_ctx, pinfo);
+	mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0x9F, 0x0D);
+	pinfo->dsi->mode_flags |= MIPI_DSI_MODE_LPM;
+
+	if (dsi_ctx.accum_err)
+		return dsi_ctx.accum_err;
+
+	return count;
+}
+
 static ssize_t frame_len_120_show(struct device *dev,
 				  struct device_attribute *attr, char *buf)
 {
@@ -380,36 +545,34 @@ static ssize_t frame_len_120_store(struct device *dev,
 				   const char *buf, size_t count)
 {
 	struct panel_info *pinfo = dev_get_drvdata(dev);
-	struct mipi_dsi_multi_context dsi_ctx = { .dsi = pinfo->dsi };
-	u16 val;
-	int ret;
 
-	ret = kstrtou16(buf, 0, &val);
-	if (ret)
-		return ret;
-
-	if (val < 0x10 || val > 0x80)
-		return -EINVAL;
-
-	pinfo->frame_len_120 = val;
-
-	if (!pinfo->enabled)
-		return count;
-
-	pinfo->dsi->mode_flags &= ~MIPI_DSI_MODE_LPM;
-	icna3520_set_frame_len(&dsi_ctx, pinfo);
-	mipi_dsi_generic_write_seq_multi(&dsi_ctx, 0x9F, 0x0D);
-	pinfo->dsi->mode_flags |= MIPI_DSI_MODE_LPM;
-
-	if (dsi_ctx.accum_err)
-		return dsi_ctx.accum_err;
-
-	return count;
+	return icna3520_frame_len_store(dev, &pinfo->frame_len_120, 120,
+					0x10, 0x80, buf, count);
 }
 static DEVICE_ATTR_RW(frame_len_120);
 
+static ssize_t frame_len_60_show(struct device *dev,
+				 struct device_attribute *attr, char *buf)
+{
+	struct panel_info *pinfo = dev_get_drvdata(dev);
+
+	return sysfs_emit(buf, "%u\n", pinfo->frame_len_60);
+}
+
+static ssize_t frame_len_60_store(struct device *dev,
+				  struct device_attribute *attr,
+				  const char *buf, size_t count)
+{
+	struct panel_info *pinfo = dev_get_drvdata(dev);
+
+	return icna3520_frame_len_store(dev, &pinfo->frame_len_60, 60,
+					0x770, 0x838, buf, count);
+}
+static DEVICE_ATTR_RW(frame_len_60);
+
 static struct attribute *icna3520_attrs[] = {
 	&dev_attr_frame_len_120.attr,
+	&dev_attr_frame_len_60.attr,
 	NULL
 };
 
@@ -447,6 +610,7 @@ static int icna35xx_probe(struct mipi_dsi_device *dsi)
 
 	if (pinfo->desc->frame_len_120) {
 		pinfo->frame_len_120 = pinfo->desc->frame_len_120;
+		pinfo->frame_len_60 = pinfo->desc->frame_len_60;
 
 		ret = devm_device_add_group(dev, &icna3520_group);
 		if (ret)
