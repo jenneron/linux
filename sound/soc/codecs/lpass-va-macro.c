@@ -1764,7 +1764,24 @@ static int va_macro_runtime_resume(struct device *dev)
 }
 
 
+static int va_macro_suspend(struct device *dev)
+{
+	if (pm_runtime_status_suspended(dev))
+		return 0;
+
+	return va_macro_runtime_suspend(dev);
+}
+
+static int va_macro_resume(struct device *dev)
+{
+	if (pm_runtime_status_suspended(dev))
+		return 0;
+
+	return va_macro_runtime_resume(dev);
+}
+
 static const struct dev_pm_ops va_macro_pm_ops = {
+	SYSTEM_SLEEP_PM_OPS(va_macro_suspend, va_macro_resume)
 	RUNTIME_PM_OPS(va_macro_runtime_suspend, va_macro_runtime_resume, NULL)
 };
 

@@ -1854,7 +1854,24 @@ static int __maybe_unused swrm_runtime_suspend(struct device *dev)
 	return 0;
 }
 
+static int __maybe_unused swrm_suspend(struct device *dev)
+{
+	if (pm_runtime_status_suspended(dev))
+		return 0;
+
+	return swrm_runtime_suspend(dev);
+}
+
+static int __maybe_unused swrm_resume(struct device *dev)
+{
+	if (pm_runtime_status_suspended(dev))
+		return 0;
+
+	return swrm_runtime_resume(dev);
+}
+
 static const struct dev_pm_ops swrm_dev_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(swrm_suspend, swrm_resume)
 	SET_RUNTIME_PM_OPS(swrm_runtime_suspend, swrm_runtime_resume, NULL)
 };
 

@@ -2434,7 +2434,24 @@ static int tx_macro_runtime_resume(struct device *dev)
 	return 0;
 }
 
+static int tx_macro_suspend(struct device *dev)
+{
+	if (pm_runtime_status_suspended(dev))
+		return 0;
+
+	return tx_macro_runtime_suspend(dev);
+}
+
+static int tx_macro_resume(struct device *dev)
+{
+	if (pm_runtime_status_suspended(dev))
+		return 0;
+
+	return tx_macro_runtime_resume(dev);
+}
+
 static const struct dev_pm_ops tx_macro_pm_ops = {
+	SYSTEM_SLEEP_PM_OPS(tx_macro_suspend, tx_macro_resume)
 	RUNTIME_PM_OPS(tx_macro_runtime_suspend, tx_macro_runtime_resume, NULL)
 };
 

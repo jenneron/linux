@@ -2880,7 +2880,24 @@ static int wsa_macro_runtime_resume(struct device *dev)
 	return 0;
 }
 
+static int wsa_macro_suspend(struct device *dev)
+{
+	if (pm_runtime_status_suspended(dev))
+		return 0;
+
+	return wsa_macro_runtime_suspend(dev);
+}
+
+static int wsa_macro_resume(struct device *dev)
+{
+	if (pm_runtime_status_suspended(dev))
+		return 0;
+
+	return wsa_macro_runtime_resume(dev);
+}
+
 static const struct dev_pm_ops wsa_macro_pm_ops = {
+	SYSTEM_SLEEP_PM_OPS(wsa_macro_suspend, wsa_macro_resume)
 	RUNTIME_PM_OPS(wsa_macro_runtime_suspend, wsa_macro_runtime_resume, NULL)
 };
 
