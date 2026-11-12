@@ -33,6 +33,7 @@
 #include <linux/vmalloc.h>
 #include <linux/export.h>
 #include <linux/qpnp/qpnp-pbs.h>
+#include <linux/input/qcom-hv-haptics.h>
 
 #include <linux/soc/qcom/battery_charger.h>
 
@@ -5783,7 +5784,7 @@ static ssize_t sweep_run_store(const struct class *c,
 
 	rc = haptics_enable_hpwr_vreg(chip, false);
 	if (rc < 0)
-		dev_err(chip->dev, "disable hpwr_vreg failed, rc=%d\n");
+		dev_err(chip->dev, "disable hpwr_vreg failed, rc=%d\n", rc);
 
 	return count;
 }

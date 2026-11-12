@@ -478,8 +478,8 @@ static const struct serdev_device_ops rsinput_rx_ops = {
 };
 
 #if IS_REACHABLE(CONFIG_INPUT_QCOM_HV_HAPTICS)
-extern int qcom_spmi_haptics_global_upload(struct ff_effect *effect);
-extern int qcom_spmi_haptics_global_playback(int effect_id, int val);
+#include <linux/input/qcom-hv-haptics.h>
+
 
 static int rsinput_rumble_upload(struct input_dev *dev, struct ff_effect *effect,
                                  struct ff_effect *old) {
