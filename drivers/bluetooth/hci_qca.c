@@ -2090,7 +2090,8 @@ retry:
 	ret = qca_uart_setup(hdev, qca_baudrate, soc_type, ver,
 			firmware_name, rampatch_name);
 	if (!ret) {
-		clear_bit(QCA_IBS_DISABLED, &qca->flags);
+		if (soc_type != QCA_WCN3950)
+			clear_bit(QCA_IBS_DISABLED, &qca->flags);
 		qca_debugfs_init(hdev);
 		hu->hdev->hw_error = qca_hw_error;
 		hu->hdev->reset = qca_reset;
@@ -2769,6 +2770,9 @@ static int __maybe_unused qca_suspend(struct device *dev)
 	 * support in-band sleep
 	 */
 	if (test_bit(QCA_ROM_FW, &qca->flags))
+		return 0;
+
+	if (qca_soc_type(hu) == QCA_WCN3950)
 		return 0;
 
 	/* During SSR after memory dump collection, controller will be
