@@ -22,6 +22,7 @@ devm_pwrseq_get(struct device *dev, const char *target);
 
 int pwrseq_enable(struct pwrseq_desc *desc);
 int pwrseq_disable(struct pwrseq_desc *desc);
+bool pwrseq_is_fixed(struct pwrseq_desc *desc);
 
 struct device *pwrseq_to_device(struct pwrseq_desc *desc);
 
@@ -56,6 +57,11 @@ static inline int pwrseq_disable(struct pwrseq_desc *desc)
 static inline struct device *pwrseq_to_device(struct pwrseq_desc *desc)
 {
 	return NULL;
+}
+
+static inline bool pwrseq_is_fixed(struct pwrseq_desc *desc)
+{
+	return true;
 }
 
 #endif /* CONFIG_POWER_SEQUENCING */
