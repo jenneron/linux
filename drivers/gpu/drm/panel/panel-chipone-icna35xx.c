@@ -644,6 +644,7 @@ static int icna35xx_probe(struct mipi_dsi_device *dsi)
 
 static const struct of_device_id icna35xx_of_match[] = {
 	{ .compatible = "ayaneo,pocketds-panel-top", .data = &odin2portal_desc },
+	{ .compatible = "ayaneo,pocketevo-panel", .data = &odin2portal_desc },
 	{ .compatible = "ayntec,odin2portal-panel", .data = &odin2portal_desc },
 	{ .compatible = "ayntec,odin3-panel", .data = &thor_top_desc },
 	{ .compatible = "ayntec,thor-panel-top", .data = &thor_top_desc },

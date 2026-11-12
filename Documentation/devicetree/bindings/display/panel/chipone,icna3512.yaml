@@ -22,6 +22,7 @@ properties:
       - items:
           - enum:
               - ayaneo,pocketds-panel-top
+              - ayaneo,pocketevo-panel
               - ayntec,odin2portal-panel
           - const: chipone,icna3512
 
