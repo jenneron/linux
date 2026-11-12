@@ -166,6 +166,15 @@ config JOYSTICK_MAGELLAN
 	  To compile this driver as a module, choose M here: the
 	  module will be called magellan.
 
+config JOYSTICK_MANGMI_POCKET_MAX
+	tristate "MANGMI Pocket SPI joypad"
+	depends on SPI
+	help
+	  Say Y here to enable support for the SPI MCU gamepad on the
+	  MANGMI Pocket Max and Air Y Pro handhelds (SM8250):
+	  sticks, dpad, A/B/X/Y, shoulders, stick clicks, triggers and
+	  the GPIO Select/Start/Home/Back/M1/M2 buttons.
+
 config JOYSTICK_SPACEORB
 	tristate "SpaceTec SpaceOrb/Avenger 6dof controllers"
 	select SERIO
