@@ -405,6 +405,11 @@ static int tcpm_init(struct tcpc_dev *dev)
 	ret = fusb302_enable_tx_auto_retries(chip, FUSB_REG_CONTROL3_N_RETRIES_3);
 	if (ret < 0)
 		return ret;
+
+	fusb302_i2c_set_bits(chip, FUSB_REG_CONTROL4,
+			     FUSB_REG_CONTROL4_EN_PAR_CFG);
+	fusb302_i2c_set_bits(chip, FUSB_REG_CONTROL5,
+			     FUSB_REG_CONTROL5_EN_PD3_MSG);
 	ret = fusb302_init_interrupt(chip);
 	if (ret < 0)
 		return ret;
