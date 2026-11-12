@@ -194,6 +194,13 @@ qcs8300-ride-el2-dtbs := qcs8300-ride.dtb monaco-el2.dtbo
 
 dtb-$(CONFIG_ARCH_QCOM)	+= qcs8300-ride-el2.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= qcs8550-aim300-aiot.dtb
+dtb-$(CONFIG_ARCH_QCOM)	+= qcs8550-ayaneo-pocketace.dtb
+dtb-$(CONFIG_ARCH_QCOM)	+= qcs8550-ayaneo-pocketdmg.dtb
+dtb-$(CONFIG_ARCH_QCOM)	+= qcs8550-ayaneo-pocketds.dtb
+dtb-$(CONFIG_ARCH_QCOM)	+= qcs8550-ayaneo-pocketevo.dtb
+dtb-$(CONFIG_ARCH_QCOM)	+= qcs8550-ayaneo-pockets1k.dtb
+dtb-$(CONFIG_ARCH_QCOM)	+= qcs8550-ayaneo-pockets2k.dtb
+dtb-$(CONFIG_ARCH_QCOM)	+= qcs8550-ayaneo-pocketsmini.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= qcs8550-ayn-odin2.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= qcs8550-ayn-odin2mini.dtb
 dtb-$(CONFIG_ARCH_QCOM)	+= qcs8550-ayn-odin2portal.dtb
