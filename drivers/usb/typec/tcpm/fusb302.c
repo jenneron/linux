@@ -998,12 +998,16 @@ static int fusb302_pd_send_message(struct fusb302_chip *chip,
 	buf[pos++] = FUSB302_TKN_EOP;
 	/* turn tx off after sending message */
 	buf[pos++] = FUSB302_TKN_TXOFF;
-	/* start transmission */
-	buf[pos++] = FUSB302_TKN_TXON;
 
 	ret = fusb302_i2c_block_write(chip, FUSB_REG_FIFOS, pos, buf);
 	if (ret < 0)
 		return ret;
+
+	ret = fusb302_i2c_set_bits(chip, FUSB_REG_CONTROL0,
+				   FUSB_REG_CONTROL0_TX_START);
+	if (ret < 0)
+		return ret;
+
 	fusb302_log(chip, "sending PD message header: %x", msg->header);
 	fusb302_log(chip, "sending PD message len: %d", len);
 
