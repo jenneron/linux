@@ -448,6 +448,7 @@ static struct rpmhpd *sm4450_rpmhpds[] = {
 	[RPMHPD_CX] = &cx,
 	[RPMHPD_CX_AO] = &cx_ao,
 	[RPMHPD_EBI] = &ebi,
+	[RPMHPD_LCX] = &lcx,
 	[RPMHPD_LMX] = &lmx,
 	[RPMHPD_MSS] = &mss,
 	[RPMHPD_MX] = &mx,
