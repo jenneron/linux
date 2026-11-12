@@ -6519,7 +6519,8 @@ static int haptics_probe(struct platform_device *pdev)
 	chip->hboost_nb.notifier_call = haptics_boost_notifier;
 	register_hboost_event_notifier(&chip->hboost_nb);
 
-	if (chip->hw_type == HAP530_HV) {
+	if (IS_REACHABLE(CONFIG_QCOM_RPROC_COMMON) &&
+	    chip->hw_type == HAP530_HV) {
 		chip->lpass_ssr_nb.notifier_call = haptics_lpass_ssr_notifier;
 		chip->lpass_ssr_handle =
 			qcom_register_ssr_notifier("lpass", &chip->lpass_ssr_nb);
@@ -6559,7 +6560,8 @@ static void haptics_remove(struct platform_device *pdev)
 	if (chip->pbs_node)
 		of_node_put(chip->pbs_node);
 
-	if (chip->hw_type == HAP530_HV)
+	if (IS_REACHABLE(CONFIG_QCOM_RPROC_COMMON) &&
+	    chip->hw_type == HAP530_HV)
 		qcom_unregister_ssr_notifier(chip->lpass_ssr_handle, &chip->lpass_ssr_nb);
 
 	unregister_hboost_event_notifier(&chip->hboost_nb);

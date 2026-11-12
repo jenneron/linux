@@ -14,4 +14,7 @@ int qcom_spmi_haptics_global_upload(struct ff_effect *effect);
 int qcom_spmi_haptics_global_playback(int effect_id, int val);
 int qcom_spmi_haptics_global_set_gain(u16 gain);
 
+/* Whether the HAP530 VI sense feedback is enabled. */
+bool qcom_haptics_vi_sense_is_enabled(void);
+
 #endif
