@@ -894,6 +894,11 @@ int qca_uart_setup(struct hci_dev *hdev, uint8_t baudrate,
 			snprintf(config.fwname, sizeof(config.fwname),
 				 "qca/hmtbtfw%02x.tlv", rom_ver);
 			break;
+		case QCA_WCN7860:
+			config.type = ELF_TYPE_PATCH;
+			snprintf(config.fwname, sizeof(config.fwname),
+				 "qca/gngbtfw%02x.mbn", rom_ver);
+			break;
 		case QCA_WCN7750:
 			snprintf(config.fwname, sizeof(config.fwname),
 				 "qca/ornbtfw%02x.tlv", rom_ver);
@@ -931,7 +936,8 @@ int qca_uart_setup(struct hci_dev *hdev, uint8_t baudrate,
 	/* Give the controller some time to get ready to receive the NVM */
 	msleep(10);
 
-	if (soc_type == QCA_QCA2066 || soc_type == QCA_WCN7850)
+	if (soc_type == QCA_QCA2066 || soc_type == QCA_WCN7850 ||
+	    soc_type == QCA_WCN7860)
 		qca_read_fw_board_id(hdev, &boardid);
 
 	/* Download NVM configuration */
@@ -992,6 +998,10 @@ int qca_uart_setup(struct hci_dev *hdev, uint8_t baudrate,
 			qca_get_nvm_name_by_board(config.fwname, sizeof(config.fwname),
 				 "hmtnv", soc_type, ver, rom_ver, boardid);
 			break;
+		case QCA_WCN7860:
+			qca_get_nvm_name_by_board(config.fwname, sizeof(config.fwname),
+				 "gngbtnv", soc_type, ver, rom_ver, boardid);
+			break;
 		case QCA_WCN7750:
 			snprintf(config.fwname, sizeof(config.fwname),
 				 "qca/ornnv%02x.bin", rom_ver);
@@ -1022,6 +1032,7 @@ int qca_uart_setup(struct hci_dev *hdev, uint8_t baudrate,
 	case QCA_WCN6750:
 	case QCA_WCN6855:
 	case QCA_WCN7850:
+	case QCA_WCN7860:
 	case QCA_WCN7750:
 		err = qca_disable_soc_logging(hdev);
 		if (err < 0)
@@ -1060,6 +1071,7 @@ int qca_uart_setup(struct hci_dev *hdev, uint8_t baudrate,
 	case QCA_WCN6750:
 	case QCA_WCN6855:
 	case QCA_WCN7850:
+	case QCA_WCN7860:
 	case QCA_WCN7750:
 		/* get fw build info */
 		err = qca_read_fw_build_info(hdev);
