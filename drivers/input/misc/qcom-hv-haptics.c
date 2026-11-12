@@ -31,6 +31,7 @@
 #include <linux/uaccess.h>
 #include <linux/workqueue.h>
 #include <linux/vmalloc.h>
+#include <linux/export.h>
 #include <linux/qpnp/qpnp-pbs.h>
 
 #include <linux/soc/qcom/battery_charger.h>
@@ -667,6 +668,8 @@ struct haptics_reg_info {
 	u8 addr;
 	u8 val;
 };
+
+static struct haptics_chip *global_haptics = NULL;
 
 static inline int get_max_fifo_samples(struct haptics_chip *chip)
 {
@@ -6075,6 +6078,9 @@ static int haptics_probe(struct platform_device *pdev)
 	if (rc < 0)
 		dev_err(chip->dev, "Creating debugfs failed, rc=%d\n", rc);
 #endif
+
+	global_haptics = chip;
+
 	return 0;
 destroy_ff:
 	input_ff_destroy(chip->input_dev);
@@ -6087,6 +6093,9 @@ static void haptics_remove(struct platform_device *pdev)
 
 	if (chip->pbs_node)
 		of_node_put(chip->pbs_node);
+
+	if (global_haptics == chip)
+		global_haptics = NULL;
 
 	unregister_hboost_event_notifier(&chip->hboost_nb);
 	class_unregister(&chip->hap_class);
@@ -6284,6 +6293,63 @@ static struct platform_driver haptics_driver = {
 	.remove		= haptics_remove,
 };
 module_platform_driver(haptics_driver);
+
+//
+int qcom_spmi_haptics_global_upload(struct ff_effect *effect) {
+	int ret;
+
+	if (!global_haptics)
+		return -ENODEV;
+
+	spin_lock_irq(&global_haptics->input_dev->event_lock);
+
+	ret = global_haptics->input_dev->ff->upload(global_haptics->input_dev, effect, NULL);
+
+	spin_unlock_irq(&global_haptics->input_dev->event_lock);
+
+	return ret;
+}
+
+int qcom_spmi_haptics_global_playback(int effect_id, int val) {
+	int ret;
+
+	if (!global_haptics)
+		return -ENODEV;
+
+	spin_lock_irq(&global_haptics->input_dev->event_lock);
+
+	if (val != 0)
+		ret = global_haptics->input_dev->ff->playback(global_haptics->input_dev, effect_id, val);
+	else
+		ret = global_haptics->input_dev->ff->erase(global_haptics->input_dev, effect_id);
+
+	if (ret)
+		pr_warn("%s called for %s, error in return (%d)\n", __func__, (val!=0 ? "Playback" : "Erase"), ret);
+
+	spin_unlock_irq(&global_haptics->input_dev->event_lock);
+
+	return ret;
+}
+
+int qcom_spmi_haptics_global_set_gain(u16 gain) {
+	if (!global_haptics)
+		return -ENODEV;
+
+	spin_lock_irq(&global_haptics->input_dev->event_lock);
+
+	//max is 0x7fff, and minimum is 0x4000 the same values android uses
+	gain = clamp(gain, 0x4000, 0x7fff);
+
+	global_haptics->input_dev->ff->set_gain(global_haptics->input_dev, gain);
+
+	spin_unlock_irq(&global_haptics->input_dev->event_lock);
+
+	return 0;
+}
+
+EXPORT_SYMBOL_GPL(qcom_spmi_haptics_global_upload);
+EXPORT_SYMBOL_GPL(qcom_spmi_haptics_global_playback);
+EXPORT_SYMBOL_GPL(qcom_spmi_haptics_global_set_gain);
 
 MODULE_DESCRIPTION("Qualcomm Technologies, Inc. High-Voltage Haptics driver");
 MODULE_LICENSE("GPL v2");

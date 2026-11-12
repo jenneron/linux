@@ -73,6 +73,10 @@ struct rsinput_driver {
     u32 trigger_right_deadzone;
 };
 
+static bool rumble_enable = true;
+module_param(rumble_enable, bool, 0660);
+MODULE_PARM_DESC(rumble_enable, "Forward rumble effects to the PMIC haptics");
+
 static const unsigned int keymap[] = {
     BTN_DPAD_UP, BTN_DPAD_DOWN, BTN_DPAD_LEFT, BTN_DPAD_RIGHT,
     BTN_NORTH,   BTN_WEST,	    BTN_EAST,	   BTN_SOUTH,
@@ -311,6 +315,46 @@ static const struct serdev_device_ops rsinput_rx_ops = {
     .receive_buf = rsinput_rx,
 };
 
+#if IS_REACHABLE(CONFIG_INPUT_QCOM_HV_HAPTICS)
+extern int qcom_spmi_haptics_global_upload(struct ff_effect *effect);
+extern int qcom_spmi_haptics_global_playback(int effect_id, int val);
+
+static int rsinput_rumble_upload(struct input_dev *dev, struct ff_effect *effect,
+                                 struct ff_effect *old) {
+    if (!rumble_enable)
+        return 0;
+
+    return qcom_spmi_haptics_global_upload(effect);
+}
+
+static int rsinput_rumble_play(struct input_dev *dev, int effect_id, int val) {
+    if (!rumble_enable)
+        return 0;
+
+    return qcom_spmi_haptics_global_playback(effect_id, val);
+}
+
+static int rsinput_setup_rumble(struct rsinput_driver *drv) {
+    int error;
+
+    input_set_capability(drv->input, EV_FF, FF_PERIODIC);
+
+    error = input_ff_create(drv->input, 1);
+    if (error)
+        return dev_err_probe(&drv->serdev->dev, error,
+                             "Unable to create force feedback device\n");
+
+    drv->input->ff->upload = rsinput_rumble_upload;
+    drv->input->ff->playback = rsinput_rumble_play;
+
+    return 0;
+}
+#else
+static int rsinput_setup_rumble(struct rsinput_driver *drv) {
+    return 0;
+}
+#endif
+
 static int rsinput_probe(struct serdev_device *serdev) {
     struct rsinput_driver *drv;
     u32 gamepad_bus = 0;
@@ -439,6 +483,10 @@ static int rsinput_probe(struct serdev_device *serdev) {
         input_set_abs_params(drv->input, ABS_RZ, 0,
                              TRIGGER_RAW_MAX - TRIGGER_RAW_MIN, 0, 0);
     }
+
+    error = rsinput_setup_rumble(drv);
+    if (error)
+        return error;
 
     error = input_register_device(drv->input);
     if (error)
