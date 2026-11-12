@@ -15,6 +15,19 @@ description:
 
 allOf:
   - $ref: panel-common.yaml#
+  - if:
+      properties:
+        compatible:
+          contains:
+            enum:
+              - ayntec,odin2portal-panel
+              - ayntec,odin3-panel
+              - ayntec,thor-panel-top
+    then:
+      required:
+        - vdd-supply
+        - disp-supply
+        - blvdd-supply
 
 properties:
   compatible:
@@ -49,11 +62,8 @@ properties:
 required:
   - compatible
   - reg
-  - vdd-supply
   - vddio-supply
   - vci-supply
-  - disp-supply
-  - blvdd-supply
   - reset-gpios
 
 additionalProperties: false
