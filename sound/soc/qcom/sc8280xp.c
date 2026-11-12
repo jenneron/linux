@@ -4,6 +4,7 @@
 #include <dt-bindings/sound/qcom,q6afe.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
+#include <linux/string.h>
 #include <sound/soc.h>
 #include <sound/soc-dapm.h>
 #include <sound/pcm.h>
@@ -101,8 +102,9 @@ static inline int sc8280xp_get_mclk_freq(struct snd_pcm_hw_params *params)
 
 static inline int sc8280xp_get_bclk_freq(struct snd_pcm_hw_params *params)
 {
+	/* An I2S frame always carries two slots, even for a mono stream */
 	return I2S_BIT_RATE(params_rate(params),
-			    params_channels(params),
+			    max(params_channels(params), 2U),
 			    snd_pcm_format_width(params_format(params)));
 }
 
@@ -230,6 +232,18 @@ static int sc8280xp_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 	channels->min = 2;
 	channels->max = 2;
 	switch (cpu_dai->id) {
+	case SENARY_MI2S_RX:
+		/*
+		 * The Retroid Pocket Classic drives both of its amps from one
+		 * channel. Everything else on this port is stereo, and forcing
+		 * mono there leaves the MFC and the I2S endpoint configured for
+		 * a single channel, so both amps reproduce the left one.
+		 */
+		if (!strcmp(rtd->card->name, "RetroidPocketClassic")) {
+			channels->min = 1;
+			channels->max = 1;
+		}
+		break;
 	case TX_CODEC_DMA_TX_0:
 	case TX_CODEC_DMA_TX_1:
 	case TX_CODEC_DMA_TX_2:
@@ -248,12 +262,12 @@ static int sc8280xp_snd_hw_params(struct snd_pcm_substream *substream,
 				  struct snd_pcm_hw_params *params)
 {
 	struct snd_soc_pcm_runtime *rtd = snd_soc_substream_to_rtd(substream);
-	struct snd_soc_dai *codec_dai = snd_soc_rtd_to_codec(rtd, 0);
 	struct snd_soc_dai *cpu_dai = snd_soc_rtd_to_cpu(rtd, 0);
 	struct sc8280xp_snd_data *data = snd_soc_card_get_drvdata(rtd->card);
 	int mclk_freq = sc8280xp_get_mclk_freq(params);
 	int bclk_freq = sc8280xp_get_bclk_freq(params);
-	int ret;
+	struct snd_soc_dai *codec_dai;
+	int ret, i;
 
 	switch (cpu_dai->id) {
 	case PRIMARY_MI2S_RX ... QUATERNARY_MI2S_TX:
@@ -264,11 +278,14 @@ static int sc8280xp_snd_hw_params(struct snd_pcm_substream *substream,
 		if (ret && ret != -ENOTSUPP)
 			return ret;
 
+		/* All codecs sharing the bus need the same format */
 		if (data->priv->codec_dai_fmt) {
-			ret = snd_soc_dai_set_fmt(codec_dai,
-						  data->priv->codec_dai_fmt);
-			if (ret && ret != -ENOTSUPP)
-				return ret;
+			for_each_rtd_codec_dais(rtd, i, codec_dai) {
+				ret = snd_soc_dai_set_fmt(codec_dai,
+							  data->priv->codec_dai_fmt);
+				if (ret && ret != -ENOTSUPP)
+					return ret;
+			}
 		}
 
 		if (data->priv->mi2s_mclk_enable) {
@@ -288,11 +305,13 @@ static int sc8280xp_snd_hw_params(struct snd_pcm_substream *substream,
 		}
 
 		if (data->priv->codec_sysclk_set) {
-			ret = snd_soc_dai_set_sysclk(codec_dai,
-						     0, mclk_freq,
-						     SND_SOC_CLOCK_IN);
-			if (ret && ret != -ENOTSUPP)
-				return ret;
+			for_each_rtd_codec_dais(rtd, i, codec_dai) {
+				ret = snd_soc_dai_set_sysclk(codec_dai,
+							     0, mclk_freq,
+							     SND_SOC_CLOCK_IN);
+				if (ret && ret != -ENOTSUPP)
+					return ret;
+			}
 		}
 		break;
 	case PRIMARY_TDM_RX_0 ... QUINARY_TDM_TX_7:
