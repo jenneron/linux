@@ -68,6 +68,7 @@ struct rsinput_driver {
     bool invert_rx;
     bool invert_ry;
     bool digital_triggers;
+    bool calibrated;
     u32 axis_range;
     u32 trigger_left_deadzone;
     u32 trigger_right_deadzone;
@@ -76,6 +77,82 @@ struct rsinput_driver {
 static bool rumble_enable = true;
 module_param(rumble_enable, bool, 0660);
 MODULE_PARM_DESC(rumble_enable, "Forward rumble effects to the PMIC haptics");
+
+/*
+ * Runtime calibration, as used by the ROCKNIX gamepad calibration tool.
+ * The values below are only applied once update_params is set to 1;
+ * until then the driver keeps its device tree driven defaults.
+ */
+static int update_params;
+
+static int trigger_left_max = 0x610;
+static int trigger_left_deadzone;
+static int trigger_left_antideadzone;
+
+static int trigger_right_max = 0x610;
+static int trigger_right_deadzone;
+static int trigger_right_antideadzone;
+
+static int axis_leftx_min = -0x580;
+static int axis_leftx_center;
+static int axis_leftx_max = 0x580;
+static int axis_leftx_deadzone;
+static int axis_leftx_antideadzone;
+
+static int axis_lefty_min = -0x580;
+static int axis_lefty_center;
+static int axis_lefty_max = 0x580;
+static int axis_lefty_deadzone;
+static int axis_lefty_antideadzone;
+
+static int axis_rightx_min = -0x580;
+static int axis_rightx_center;
+static int axis_rightx_max = 0x580;
+static int axis_rightx_deadzone;
+static int axis_rightx_antideadzone;
+
+static int axis_righty_min = -0x580;
+static int axis_righty_center;
+static int axis_righty_max = 0x580;
+static int axis_righty_deadzone;
+static int axis_righty_antideadzone;
+
+module_param(update_params, int, 0660);
+MODULE_PARM_DESC(update_params, "Write 1 to apply the calibration parameters");
+
+module_param(trigger_left_max, int, 0660);
+module_param(trigger_left_deadzone, int, 0660);
+module_param(trigger_left_antideadzone, int, 0660);
+
+module_param(trigger_right_max, int, 0660);
+module_param(trigger_right_deadzone, int, 0660);
+module_param(trigger_right_antideadzone, int, 0660);
+
+module_param(axis_leftx_min, int, 0660);
+module_param(axis_leftx_center, int, 0660);
+module_param(axis_leftx_max, int, 0660);
+module_param(axis_leftx_deadzone, int, 0660);
+module_param(axis_leftx_antideadzone, int, 0660);
+
+module_param(axis_lefty_min, int, 0660);
+module_param(axis_lefty_center, int, 0660);
+module_param(axis_lefty_max, int, 0660);
+module_param(axis_lefty_deadzone, int, 0660);
+module_param(axis_lefty_antideadzone, int, 0660);
+
+module_param(axis_rightx_min, int, 0660);
+module_param(axis_rightx_center, int, 0660);
+module_param(axis_rightx_max, int, 0660);
+module_param(axis_rightx_deadzone, int, 0660);
+module_param(axis_rightx_antideadzone, int, 0660);
+
+module_param(axis_righty_min, int, 0660);
+module_param(axis_righty_center, int, 0660);
+module_param(axis_righty_max, int, 0660);
+module_param(axis_righty_deadzone, int, 0660);
+module_param(axis_righty_antideadzone, int, 0660);
+
+#define INT_SIGN(X) (((X) > 0) - ((X) < 0))
 
 static const unsigned int keymap[] = {
     BTN_DPAD_UP, BTN_DPAD_DOWN, BTN_DPAD_LEFT, BTN_DPAD_RIGHT,
@@ -196,6 +273,80 @@ static int rsinput_axis(struct rsinput_driver *drv, const uint8_t *p, bool inver
     return clamp(val, -(int)drv->axis_range, (int)drv->axis_range);
 }
 
+static void rsinput_apply_calibration(struct rsinput_driver *drv) {
+    input_set_abs_params(drv->input, ABS_X,
+        INT_SIGN(axis_leftx_min) * (abs(axis_leftx_min) - axis_leftx_antideadzone),
+        INT_SIGN(axis_leftx_max) * (abs(axis_leftx_max) - axis_leftx_antideadzone),
+        0, 0);
+    input_set_abs_params(drv->input, ABS_Y,
+        INT_SIGN(axis_lefty_min) * (abs(axis_lefty_min) - axis_lefty_antideadzone),
+        INT_SIGN(axis_lefty_max) * (abs(axis_lefty_max) - axis_lefty_antideadzone),
+        0, 0);
+    input_set_abs_params(drv->input, ABS_RX,
+        INT_SIGN(axis_rightx_min) * (abs(axis_rightx_min) - axis_rightx_antideadzone),
+        INT_SIGN(axis_rightx_max) * (abs(axis_rightx_max) - axis_rightx_antideadzone),
+        0, 0);
+    input_set_abs_params(drv->input, ABS_RY,
+        INT_SIGN(axis_righty_min) * (abs(axis_righty_min) - axis_righty_antideadzone),
+        INT_SIGN(axis_righty_max) * (abs(axis_righty_max) - axis_righty_antideadzone),
+        0, 0);
+
+    if (!drv->digital_triggers) {
+        input_set_abs_params(drv->input, ABS_Z, 0,
+                             trigger_left_max - trigger_left_antideadzone, 0, 30);
+        input_set_abs_params(drv->input, ABS_RZ, 0,
+                             trigger_right_max - trigger_right_antideadzone, 0, 30);
+    }
+
+    drv->calibrated = true;
+}
+
+static int rsinput_cal_trigger(u16 raw, int max, int deadzone, int antideadzone) {
+    int val = max - (int16_t)raw;
+
+    return val < deadzone ? 0 : val - antideadzone;
+}
+
+static int rsinput_cal_axis(const uint8_t *p, int center, int deadzone,
+                            int antideadzone, bool invert) {
+    int val = -(int16_t)(p[0] | (p[1] << 8)) + center;
+
+    val = abs(val) < deadzone ? 0 : INT_SIGN(val) * (abs(val) - antideadzone);
+
+    return invert ? -val : val;
+}
+
+static void rsinput_report_calibrated(struct rsinput_driver *drv, const uint8_t *data,
+                                      u16 raw_l, u16 raw_r) {
+    if (!drv->digital_triggers) {
+        input_report_abs(drv->input, ABS_Z,
+                         rsinput_cal_trigger(raw_l, trigger_left_max,
+                                             trigger_left_deadzone,
+                                             trigger_left_antideadzone));
+        input_report_abs(drv->input, ABS_RZ,
+                         rsinput_cal_trigger(raw_r, trigger_right_max,
+                                             trigger_right_deadzone,
+                                             trigger_right_antideadzone));
+    }
+
+    input_report_abs(drv->input, ABS_X,
+                     rsinput_cal_axis(&data[FRAME_POS_DATA_7], axis_leftx_center,
+                                      axis_leftx_deadzone, axis_leftx_antideadzone,
+                                      drv->invert_x));
+    input_report_abs(drv->input, ABS_Y,
+                     rsinput_cal_axis(&data[FRAME_POS_DATA_9], axis_lefty_center,
+                                      axis_lefty_deadzone, axis_lefty_antideadzone,
+                                      drv->invert_y));
+    input_report_abs(drv->input, ABS_RX,
+                     rsinput_cal_axis(&data[FRAME_POS_DATA_11], axis_rightx_center,
+                                      axis_rightx_deadzone, axis_rightx_antideadzone,
+                                      drv->invert_rx));
+    input_report_abs(drv->input, ABS_RY,
+                     rsinput_cal_axis(&data[FRAME_POS_DATA_13], axis_righty_center,
+                                      axis_righty_deadzone, axis_righty_antideadzone,
+                                      drv->invert_ry));
+}
+
 static void handle_cmd_status(struct rsinput_driver *drv, const uint8_t *data, size_t payload_length) {
     if (drv->resuming) {
         if (ktime_ms_delta(ktime_get(), drv->resume_time) < REPORT_RESUME_TIME)
@@ -209,6 +360,11 @@ static void handle_cmd_status(struct rsinput_driver *drv, const uint8_t *data, s
     unsigned long current_states = keys, changes;
     int i;
 
+    if (update_params) {
+        rsinput_apply_calibration(drv);
+        update_params = 0;
+    }
+
     bitmap_xor(&changes, &current_states, &prev_states, ARRAY_SIZE(keymap));
 
     for_each_set_bit(i, &changes, ARRAY_SIZE(keymap)) {
@@ -221,17 +377,23 @@ static void handle_cmd_status(struct rsinput_driver *drv, const uint8_t *data, s
     if (drv->digital_triggers) {
         input_report_key(drv->input, BTN_TL2, raw_l != 0);
         input_report_key(drv->input, BTN_TR2, raw_r != 0);
-    } else {
-        input_report_abs(drv->input, ABS_Z,
-                         rsinput_trigger(raw_l, drv->trigger_left_deadzone));
-        input_report_abs(drv->input, ABS_RZ,
-                         rsinput_trigger(raw_r, drv->trigger_right_deadzone));
     }
 
-    input_report_abs(drv->input, ABS_X, rsinput_axis(drv, &data[FRAME_POS_DATA_7], drv->invert_x));
-    input_report_abs(drv->input, ABS_Y, rsinput_axis(drv, &data[FRAME_POS_DATA_9], drv->invert_y));
-    input_report_abs(drv->input, ABS_RX, rsinput_axis(drv, &data[FRAME_POS_DATA_11], drv->invert_rx));
-    input_report_abs(drv->input, ABS_RY, rsinput_axis(drv, &data[FRAME_POS_DATA_13], drv->invert_ry));
+    if (drv->calibrated) {
+        rsinput_report_calibrated(drv, data, raw_l, raw_r);
+    } else {
+        if (!drv->digital_triggers) {
+            input_report_abs(drv->input, ABS_Z,
+                             rsinput_trigger(raw_l, drv->trigger_left_deadzone));
+            input_report_abs(drv->input, ABS_RZ,
+                             rsinput_trigger(raw_r, drv->trigger_right_deadzone));
+        }
+
+        input_report_abs(drv->input, ABS_X, rsinput_axis(drv, &data[FRAME_POS_DATA_7], drv->invert_x));
+        input_report_abs(drv->input, ABS_Y, rsinput_axis(drv, &data[FRAME_POS_DATA_9], drv->invert_y));
+        input_report_abs(drv->input, ABS_RX, rsinput_axis(drv, &data[FRAME_POS_DATA_11], drv->invert_rx));
+        input_report_abs(drv->input, ABS_RY, rsinput_axis(drv, &data[FRAME_POS_DATA_13], drv->invert_ry));
+    }
 
     input_sync(drv->input);
     prev_states = keys;
