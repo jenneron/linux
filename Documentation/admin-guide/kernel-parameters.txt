@@ -8141,6 +8141,14 @@ Kernel parameters
 			USB_REQ_GET_DESCRIPTOR request in milliseconds
 			(default 5000 = 5.0 seconds).
 
+	usbcore.interrupt_interval_override=
+			[USB] A list of USB devices for which a different polling
+			interval than the default shall be used on all interrupt-type
+			endpoints. The format is VendorID:ProductID:interval, with
+			the vendor and product ids specified hexadecimally, and the
+			interval decimally in milliseconds.
+			Example: interrupt_interval_override=045e:00db:16,1bcf:0005:2
+
 	usbcore.nousb	[USB] Disable the USB subsystem
 
 	usbcore.quirks=
