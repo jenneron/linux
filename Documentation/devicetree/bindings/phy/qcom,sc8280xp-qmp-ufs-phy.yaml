@@ -48,6 +48,7 @@ properties:
           - qcom,sc8180x-qmp-ufs-phy
           - qcom,sc8280xp-qmp-ufs-phy
           - qcom,sdm845-qmp-ufs-phy
+          - qcom,sm4450-qmp-ufs-phy
           - qcom,sm6115-qmp-ufs-phy
           - qcom,sm6125-qmp-ufs-phy
           - qcom,sm6350-qmp-ufs-phy
@@ -118,6 +119,7 @@ allOf:
               - qcom,sc8180x-qmp-ufs-phy
               - qcom,sc8280xp-qmp-ufs-phy
               - qcom,sdm845-qmp-ufs-phy
+              - qcom,sm4450-qmp-ufs-phy
               - qcom,sm6115-qmp-ufs-phy
               - qcom,sm6125-qmp-ufs-phy
               - qcom,sm6350-qmp-ufs-phy
