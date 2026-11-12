@@ -16,6 +16,7 @@
 #include <linux/module.h>
 #include <linux/mutex.h>
 #include <linux/regmap.h>
+#include <linux/regulator/consumer.h>
 #include <linux/time.h>
 #include <linux/units.h>
 
@@ -565,6 +566,11 @@ static int aw200xx_probe(struct i2c_client *client)
 	chip->regmap = devm_regmap_init_i2c(client, &aw200xx_regmap_config);
 	if (IS_ERR(chip->regmap))
 		return PTR_ERR(chip->regmap);
+
+	ret = devm_regulator_get_enable_optional(&client->dev, "vdd");
+	if (ret < 0 && ret != -ENODEV)
+		return dev_err_probe(&client->dev, ret,
+				     "Failed to enable vdd regulator\n");
 
 	chip->hwen = devm_gpiod_get_optional(&client->dev, "enable",
 					     GPIOD_OUT_HIGH);
