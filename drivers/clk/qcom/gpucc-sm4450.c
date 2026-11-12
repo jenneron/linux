@@ -700,7 +700,6 @@ static struct gdsc gpu_cc_gx_gdsc = {
 	.reset_count = 3,
 	.pd = {
 		.name = "gpu_gx_gdsc",
-		.power_on = gdsc_gx_do_nothing_enable,
 	},
 	.pwrsts = PWRSTS_OFF_ON,
 	.flags = CLAMP_IO | AON_RESET | SW_RESET | POLL_CFG_GDSCR,
