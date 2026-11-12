@@ -236,6 +236,8 @@ struct lpg_channel_data {
  * @triled_has_src_sel:	true if there is TRI_LED_SRC_SEL register
  * @num_channels:	number of channels in LPG
  * @channels:		list of channel initialization data
+ * @hi_res_19p2_only:	high resolution PWM cannot use the 76.8 MHz clock
+ * @keep_glitch_removal: skip lpg_enable_glitch() after applying a channel
  */
 struct lpg_data {
 	unsigned int lut_base;
@@ -245,6 +247,8 @@ struct lpg_data {
 	bool triled_has_src_sel;
 	int num_channels;
 	const struct lpg_channel_data *channels;
+	bool hi_res_19p2_only;
+	bool keep_glitch_removal;
 };
 
 #define PBS_SW_TRIG_BIT		BIT(0)
@@ -452,6 +456,9 @@ static int lpg_calc_freq(struct lpg_channel *chan, uint64_t period)
 	if (chan->subtype == LPG_SUBTYPE_HI_RES_PWM) {
 		clk_rate_arr = lpg_clk_rates_hi_res;
 		clk_len = ARRAY_SIZE(lpg_clk_rates_hi_res);
+		/* Skip the 76.8 MHz entry on blocks not known to support it */
+		if (chan->lpg->data->hi_res_19p2_only)
+			clk_len--;
 		pwm_resolution_arr = lpg_pwm_resolution_hi_res;
 		pwm_resolution_count = ARRAY_SIZE(lpg_pwm_resolution_hi_res);
 		max_res = LPG_RESOLUTION_15BIT;
@@ -795,7 +802,8 @@ static void lpg_apply(struct lpg_channel *chan)
 		lpg_sdam_apply_lut_control(chan);
 	else
 		lpg_apply_lut_control(chan);
-	lpg_enable_glitch(chan);
+	if (!chan->lpg->data->keep_glitch_removal)
+		lpg_enable_glitch(chan);
 }
 
 static void lpg_brightness_set(struct lpg_led *led, struct led_classdev *cdev,
@@ -1650,6 +1658,15 @@ static int lpg_probe(struct platform_device *pdev)
 	return lpg_add_pwm(lpg);
 }
 
+static const struct lpg_data pm6450_pwm_data = {
+	.num_channels = 1,
+	.channels = (const struct lpg_channel_data[]) {
+		{ .base = 0xe800 },
+	},
+	.hi_res_19p2_only = true,
+	.keep_glitch_removal = true,
+};
+
 static const struct lpg_data pm660l_lpg_data = {
 	.lut_base = 0xb000,
 	.lut_size = 49,
@@ -1828,6 +1845,7 @@ static const struct lpg_data pmk8550_pwm_data = {
 
 static const struct of_device_id lpg_of_table[] = {
 	{ .compatible = "qcom,pm6125-pwm", .data = &pm6125_pwm_data },
+	{ .compatible = "qcom,pm6450-pwm", .data = &pm6450_pwm_data },
 	{ .compatible = "qcom,pm660l-lpg", .data = &pm660l_lpg_data },
 	{ .compatible = "qcom,pm8150b-lpg", .data = &pm8150b_lpg_data },
 	{ .compatible = "qcom,pm8150l-lpg", .data = &pm8150l_lpg_data },
