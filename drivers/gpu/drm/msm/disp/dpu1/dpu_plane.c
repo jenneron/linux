@@ -54,6 +54,15 @@
 #define DPU_QSEED3_DEFAULT_PRELOAD_V 0x3
 #define DPU_QSEED4_DEFAULT_PRELOAD_V 0x2
 #define DPU_QSEED4_DEFAULT_PRELOAD_H 0x4
+/*
+ * With the true inline rotator in front of it, QSEED4 needs three more
+ * pixels of horizontal preload: with the default of 4 every rotated pipe
+ * repeats its first output pixel four times and then runs three source
+ * lines late, which on a panel split across two mixers drops three lines
+ * at the seam. Measured on SM8650 by writing back the mixer output (1:1 and
+ * upscaled): 4 -> 3 lines late, 5 -> 2, 6 -> 1, 7 -> exact, 8 -> 1 early.
+ */
+#define DPU_QSEED4_ROT90_PRELOAD_H 0x7
 
 #define DEFAULT_REFRESH_RATE	60
 
@@ -477,7 +486,9 @@ static void _dpu_plane_setup_scaler3(struct dpu_hw_sspp *pipe_hw,
 		}
 
 		if (pipe_hw->cap->sblk->scaler_blk.version >= 0x3000) {
-			scale_cfg->preload_x[i] = DPU_QSEED4_DEFAULT_PRELOAD_H;
+			scale_cfg->preload_x[i] = inline_rotation ?
+				DPU_QSEED4_ROT90_PRELOAD_H :
+				DPU_QSEED4_DEFAULT_PRELOAD_H;
 			scale_cfg->preload_y[i] = DPU_QSEED4_DEFAULT_PRELOAD_V;
 		} else {
 			scale_cfg->preload_x[i] = DPU_QSEED3_DEFAULT_PRELOAD_H;
