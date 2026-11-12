@@ -63,17 +63,17 @@ static int sm8250_be_hw_params_fixup(struct snd_soc_pcm_runtime *rtd,
 					SNDRV_PCM_HW_PARAM_RATE);
 	struct snd_interval *channels = hw_param_interval(params,
 					SNDRV_PCM_HW_PARAM_CHANNELS);
-	struct snd_mask *fmt = hw_param_mask(params, SNDRV_PCM_HW_PARAM_FORMAT);
 
 	rate->min = rate->max = 48000;
 	channels->min = channels->max = 2;
 
-	/* Only force S16_LE format for compressed playback */
-	if (rtd->dai_link->compr_ops) {
-		/* This is a compressed stream, set format to S16_LE */
-		snd_mask_set_format(fmt, SNDRV_PCM_FORMAT_S16_LE);
-	} else {
-		/* For other streams, let format be negotiated as before */
+	/*
+	 * Force S16_LE for compressed playback, and for every BE on the
+	 * SM4250/SM6115 (qrb4210-rb2) card, whose MI2S codecs only run at
+	 * 16 bits. Other cards let the format be negotiated.
+	 */
+	if (rtd->dai_link->compr_ops || !strcmp(rtd->card->driver_name, "sm4250")) {
+		params_set_format(params, SNDRV_PCM_FORMAT_S16_LE);
 	}
 
 	return 0;
