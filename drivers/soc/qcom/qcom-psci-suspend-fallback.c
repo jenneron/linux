@@ -1,0 +1,81 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * PSCI SYSTEM_SUSPEND fallback via CPU_SUSPEND.
+ *
+ */
+
+#include <linux/init.h>
+#include <linux/kernel.h>
+#include <linux/of.h>
+#include <linux/platform_device.h>
+#include <linux/printk.h>
+#include <linux/psci.h>
+#include <linux/suspend.h>
+
+#include <asm/memory.h>
+#include <asm/suspend.h>
+
+static u32 psci_fallback_state_id;
+
+static noinstr int psci_fallback_finisher(unsigned long state)
+{
+	u32 power_state = state;
+	phys_addr_t pa_cpu_resume;
+
+	pa_cpu_resume = __pa_symbol_nodebug((unsigned long)cpu_resume);
+
+	return psci_ops.cpu_suspend(power_state, pa_cpu_resume);
+}
+
+static int psci_fallback_enter(suspend_state_t state)
+{
+	int ret;
+
+	if (!psci_ops.cpu_suspend) {
+		pr_warn("psci-suspend-fallback: CPU_SUSPEND unavailable\n");
+		return -EOPNOTSUPP;
+	}
+
+	ret = cpu_suspend(psci_fallback_state_id, psci_fallback_finisher);
+	if (ret)
+		pr_warn("psci-suspend-fallback: CPU_SUSPEND(0x%08x) returned %d\n",
+			psci_fallback_state_id, ret);
+	return ret;
+}
+
+static const struct platform_suspend_ops psci_fallback_ops = {
+	.valid	= suspend_valid_only_mem,
+	.enter	= psci_fallback_enter,
+};
+
+static int psci_fallback_probe(struct platform_device *pdev)
+{
+	int ret;
+
+	ret = of_property_read_u32(pdev->dev.of_node,
+				   "qcom,suspend-state-id",
+				   &psci_fallback_state_id);
+	if (ret)
+		return dev_err_probe(&pdev->dev, ret,
+				     "missing qcom,suspend-state-id\n");
+
+	suspend_set_ops(&psci_fallback_ops);
+	dev_info(&pdev->dev,
+		 "PSCI suspend fallback installed (state-id 0x%08x)\n",
+		 psci_fallback_state_id);
+	return 0;
+}
+
+static const struct of_device_id psci_fallback_match[] = {
+	{ .compatible = "qcom,psci-suspend-fallback" },
+	{ /* sentinel */ }
+};
+
+static struct platform_driver psci_fallback_driver = {
+	.probe	= psci_fallback_probe,
+	.driver	= {
+		.name		= "qcom-psci-suspend-fallback",
+		.of_match_table	= psci_fallback_match,
+	},
+};
+builtin_platform_driver(psci_fallback_driver);
