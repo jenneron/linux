@@ -14,6 +14,7 @@
 #include <linux/gpio/consumer.h>
 #include <linux/usb/typec_dp.h>
 #include <linux/usb/typec_mux.h>
+#include <linux/usb/wcd939x-usbss.h>
 
 #define WCD_USBSS_PMP_OUT1			0x2
 

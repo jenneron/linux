@@ -28,6 +28,7 @@
 #include <linux/regulator/consumer.h>
 #include <linux/usb/typec_mux.h>
 #include <linux/usb/typec_altmode.h>
+#include <linux/usb/wcd939x-usbss.h>
 
 #include "wcd-clsh-v2.h"
 #include "wcd-common.h"
@@ -2673,9 +2674,6 @@ static void wcd939x_mbhc_moisture_polling_ctrl(struct snd_soc_component *compone
 				      WCD939X_MOISTURE_DET_POLLING_CTRL_MOIST_EN_POLLING,
 				      enable);
 }
-
-/* Provided by the WCD939x USBSS analog-switch driver (built-in). */
-int wcd939x_usbss_audio_config(struct device *dev, bool enable);
 
 /*
  * Route the WCD939x USBSS into/out of audio-accessory mode when the MBHC
