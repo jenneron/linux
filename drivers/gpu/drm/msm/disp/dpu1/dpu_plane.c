@@ -485,7 +485,7 @@ static void _dpu_plane_setup_scaler3(struct dpu_hw_sspp *pipe_hw,
 		}
 	}
 	if (!(MSM_FORMAT_IS_YUV(fmt)) && (src_h == dst_h)
-		&& (src_w == dst_w))
+		&& (src_w == dst_w) && !inline_rotation)
 		return;
 
 	scale_cfg->dst_width = dst_w;
@@ -734,9 +734,9 @@ static int dpu_plane_check_inline_rotation(struct dpu_plane *pdpu,
 		return -EINVAL;
 	}
 
-	if (drm_rect_width(&src) > sblk->rotation_cfg->rot_maxheight) {
+	if (drm_rect_height(&src) > sblk->rotation_cfg->rot_maxheight) {
 		DPU_DEBUG_PLANE(pdpu, "invalid height for inline rot:%d max:%d\n",
-				src.y2, sblk->rotation_cfg->rot_maxheight);
+				drm_rect_height(&src), sblk->rotation_cfg->rot_maxheight);
 		return -EINVAL;
 	}
 
@@ -787,6 +787,9 @@ static int dpu_plane_atomic_check_pipe(struct dpu_plane *pdpu,
 
 	pipe_cfg->rotation = drm_rotation_simplify(new_plane_state->rotation,
 						   supported_rotations);
+
+	if (pipe_cfg->rotation & DRM_MODE_ROTATE_90)
+		pipe_cfg->rotation ^= DRM_MODE_REFLECT_X | DRM_MODE_REFLECT_Y;
 
 	min_src_size = MSM_FORMAT_IS_YUV(fmt) ? 2 : 1;
 
