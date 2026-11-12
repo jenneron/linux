@@ -11,6 +11,7 @@
 #include <linux/errno.h>
 #include <linux/gpio/consumer.h>
 #include <linux/input.h>
+#include <linux/input/qcom-spmi-haptics.h>
 #include <linux/interrupt.h>
 #include <linux/kernel.h>
 #include <linux/log2.h>

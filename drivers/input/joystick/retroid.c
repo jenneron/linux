@@ -14,6 +14,7 @@
 #include <linux/gpio/consumer.h>
 #include <linux/init.h>
 #include <linux/input.h>
+#include <linux/input/qcom-spmi-haptics.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
@@ -334,8 +335,6 @@ static size_t gamepad_mcu_uart_rx_bytes(struct serdev_device *serdev,
 static const struct serdev_device_ops gamepad_mcu_uart_client_ops = {
 	.receive_buf = gamepad_mcu_uart_rx_bytes,
 };
-
-extern int qcom_spmi_haptics_rumble(unsigned int strong_magnitude, unsigned int weak_magnitude);
 
 static int retroid_rumble_play(struct input_dev *dev, void *data, struct ff_effect *effect)
 {
